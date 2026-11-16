@@ -1,0 +1,737 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="A personalized checklist and deadline timeline for sailors separating from the Navy.">
+<meta name="theme-color" content="#1f3a6e"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Sep Planner">
+<style>:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Navy Separation Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one column tool. Setup card on top, countdown strip, then timeline rail beside the checklist on wide screens. */
+:root {
+  --bg: #f2f4f8; --surface: #ffffff; --ink: #14213a; --muted: #586581; --line: #d4dae6;
+  --accent: #1f3a6e; --accent-ink: #ffffff; --brass: #96690f; --ok: #25704c; --bad: #b0352d;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1422; --surface: #161f32; --ink: #e6ebf5; --muted: #9aa7c1; --line: #2b3751;
+  --accent: #93b3f0; --accent-ink: #0d1422; --brass: #e2b65c; --ok: #6fca9d; --bad: #f18c82; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1422; --surface: #161f32; --ink: #e6ebf5; --muted: #9aa7c1; --line: #2b3751;
+  --accent: #93b3f0; --accent-ink: #0d1422; --brass: #e2b65c; --ok: #6fca9d; --bad: #f18c82; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1180px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 1.1rem; margin: 0; }
+p { margin: 0; }
+.sub { color: var(--muted); max-width: 65ch; margin-top: 6px; }
+.small { font-size: .82rem; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 999px; padding: 7px 18px; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 500; }
+.btn.ghost:hover { border-color: var(--muted); }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); font-weight: 500; }
+
+/* setup */
+.banner { border-left: 4px solid var(--brass); background: var(--surface); border-radius: var(--r); padding: 10px 14px; border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.banner b { color: var(--brass); }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 14px 18px; margin-top: 14px; }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f label, .f .lab { font-weight: 600; font-size: .88rem; }
+.f .hint { font-size: .78rem; color: var(--muted); }
+.f input[type=date], .f input[type=text], .f select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; box-sizing: border-box; min-width: 0; }
+.yn { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.yn label { display: flex; gap: 10px; align-items: flex-start; }
+.err { color: var(--bad); font-size: .85rem; margin-top: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
+.summary { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .8rem; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+
+/* countdown */
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 12px; }
+.stat .k { font-size: .8rem; color: var(--muted); }
+.stat .v { font-family: var(--display); font-weight: 600; font-size: 2rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat .v.txt { font-size: 1.05rem; line-height: 1.3; padding-top: 6px; }
+.stat .s { font-size: .8rem; color: var(--muted); }
+.stat.hot .v { color: var(--brass); }
+
+.cols { display: block; }
+#timeline-card { max-width: 44rem; }
+.nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.nav button { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 500; }
+.nav button[aria-current=page] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.nav .nct { margin-left: 5px; font-size: .78rem; font-variant-numeric: tabular-nums; opacity: .8; }
+@media (max-width: 719px) {
+  body { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .nav { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; flex-wrap: nowrap; gap: 0; background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  .nav button { flex: 1 1 0; min-width: 0; border: 0; border-radius: 8px; padding: 9px 2px; font-size: .74rem; white-space: nowrap; }
+  .nav .nct { margin-left: 3px; font-size: .68rem; }
+}
+.upnext { list-style: none; margin: 10px 0 0; padding: 0; }
+.upnext li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); }
+.upnext .tt { font-weight: 600; flex: 1 1 16rem; min-width: 0; }
+.upnext .dd { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.upnext .dd.over { color: var(--bad); } .upnext .dd.soon { color: var(--brass); }
+.mini { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; font-size: .86rem; color: var(--muted); padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r); }
+.mini b { color: var(--ink); font-weight: 600; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
+
+/* timeline */
+.tl { display: flex; flex-direction: column; margin-top: 12px; }
+.tlr { display: grid; grid-template-columns: 5.4rem 14px 1fr; gap: 8px; padding: 5px 0; position: relative; }
+.tlr .d { font-size: .78rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.tlr .rail { position: relative; }
+.tlr .rail::before { content: ""; position: absolute; left: 6px; top: 0; bottom: -10px; width: 1px; background: var(--line); }
+.tlr:last-child .rail::before { display: none; }
+.tlr .dot { position: absolute; left: 2px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.tlr.dl .dot { background: var(--brass); }
+.tlr.sep .dot { background: var(--accent); width: 13px; height: 13px; left: 0; top: 4px; }
+.tlr .t { font-size: .88rem; line-height: 1.35; min-width: 0; }
+.tlr .t span { display: block; font-size: .76rem; color: var(--muted); }
+.tlr.sep .t { font-weight: 600; }
+.tlr.past .t, .tlr.past .d { opacity: .5; }
+.today { display: grid; grid-template-columns: 5.4rem 1fr; gap: 8px; align-items: center; font-size: .76rem; font-weight: 600; color: var(--bad); padding: 3px 0; }
+.today .d { text-align: right; }
+.today i { border-top: 2px dashed var(--bad); opacity: .6; }
+
+/* checklist */
+.tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 12px 0; }
+.prog { display: flex; align-items: center; gap: 10px; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; flex: 1 1 13rem; }
+.prog .bar { flex: 1; max-width: 14rem; height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.prog .bar i { display: block; height: 100%; width: 0; background: var(--ok); }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.tabs button { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: .82rem; }
+.tabs button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tabs .n { opacity: .75; margin-left: 5px; font-variant-numeric: tabular-nums; }
+.box { appearance: none; -webkit-appearance: none; flex: none; width: 20px; height: 20px; margin: 2px 0 0; border: 1.5px solid var(--muted); border-radius: 5px; display: inline-grid; place-content: center; background: transparent; cursor: pointer; }
+.box::after { content: ""; width: 5px; height: 10px; border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px,-1px); opacity: 0; }
+.box:checked { background: var(--ok); border-color: var(--ok); }
+.box:checked::after { opacity: 1; }
+.items { list-style: none; margin: 0; padding: 0; }
+.item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.item .head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.item .ttl { font-weight: 600; cursor: pointer; }
+.item.done .ttl { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+.item.done .notes, .item.done .meta { opacity: .6; }
+.pill { font-size: .72rem; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; white-space: nowrap; color: var(--muted); }
+.pill.now, .pill.dec { color: var(--brass); } .pill.late { color: var(--bad); } .pill.ok { color: var(--ok); }
+.meta { font-size: .8rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.meta b { color: var(--ink); font-weight: 600; }
+.meta .soon { color: var(--brass); } .meta .over { color: var(--bad); }
+.meta a { color: inherit; }
+.notes { font-size: .86rem; color: var(--muted); margin-top: 5px; max-width: 70ch; }
+.planbtn { margin-top: 8px; background: transparent; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); font-size: .8rem; padding: 2px 10px; }
+.planbtn.ask { border-style: solid; border-color: var(--brass); color: var(--brass); }
+.plan { margin-top: 8px; max-width: 70ch; }
+.plan label { font-size: .76rem; font-weight: 600; color: var(--ok); display: block; margin-bottom: 3px; }
+.plan textarea { width: 100%; box-sizing: border-box; min-height: 3.4rem; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--ok); border-radius: 6px; padding: 6px 9px; font-size: .86rem; line-height: 1.45; }
+.empty { color: var(--muted); padding: 18px 0; border-top: 1px solid var(--line); }
+.hide { display: inline-flex; gap: 8px; align-items: center; font-size: .82rem; color: var(--muted); cursor: pointer; }
+
+.local { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 18px 28px; margin-top: 14px; }
+.local h3 { font-size: .78rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.ct { padding: 8px 0; border-top: 1px solid var(--line); min-width: 0; }
+.ct .nm { font-weight: 600; font-size: .92rem; }
+.ct .ph { font-family: var(--display); font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; user-select: all; }
+.ct .dt { font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.ct a { color: var(--accent); }
+.cal { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.cal h3 { font-family: var(--display); font-size: .95rem; margin: 0; }
+.cal .actions { margin-top: 0; }
+.cal textarea { width: 100%; box-sizing: border-box; min-height: 6rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .72rem; }
+.tlr .t a { font-size: .76rem; color: var(--accent); }
+.backup textarea { width: 100%; box-sizing: border-box; min-height: 3.2rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .76rem; margin-top: 10px; }
+.foot { font-size: .8rem; color: var(--muted); max-width: 75ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Navy Separation Planner</h1>
+    <p class="sub" id="intro" data-view="home">Enter your separation date and a few details. Every deadline, form and commonly missed step is then dated for you, from TAP and your VA claim through your move and the months after you're out.</p>
+  </header>
+
+  <nav class="nav" id="nav" aria-label="Sections">
+    <button type="button" data-go="home">Home</button>
+    <button type="button" data-go="checklist">Checklist<span class="nct" id="nav-ct"></span></button>
+    <button type="button" data-go="dates">Dates</button>
+    <button type="button" data-go="help">Help</button>
+    <button type="button" data-go="me">My info</button>
+  </nav>
+
+  <div class="banner" id="example-banner" data-view="home" hidden><b>This is an example.</b> <span id="example-text"></span> <button type="button" class="linkbtn" data-go="me">Enter your info</button> to make it yours.</div>
+
+  <section class="card" id="setup-card" data-view="me">
+    <div id="summary" class="summary" hidden>
+      <div><h2 id="sum-title">Your info</h2><div class="chips" id="sum-chips" style="margin-top:8px"></div></div>
+      <button type="button" class="btn ghost" id="edit-btn">Edit my info</button>
+    </div>
+    <form id="setup" novalidate>
+      <h2>Your info</h2>
+      <p class="small" style="margin-top:4px">Stays in this browser. Nothing you enter is sent anywhere or visible to anyone else.</p>
+      <div class="fgrid">
+        <div class="f"><label for="f-name">First name (optional)</label><input type="text" id="f-name" maxlength="40" autocomplete="off"></div>
+        <div class="f"><label for="f-sep">Separation date (EAOS)</label><input type="date" id="f-sep" required><span class="hint">Your last day of active duty.</span></div>
+        <div class="f"><label for="f-out">Last working day at your command</label><input type="date" id="f-out"><span class="hint">Earlier than EAOS if you'll take terminal leave or SkillBridge. Leave blank if unsure.</span></div>
+        <div class="f"><label for="f-base">Current command location</label><select id="f-base"></select><span class="hint">Used to show your local Fleet and Family office and claims help.</span></div>
+        <div class="f"><label for="f-grade">Paygrade</label><select id="f-grade"><option value="e5">E-1 to E-5</option><option value="e69" selected>E-6 to E-9</option><option value="off">Officer</option></select></div>
+        <div class="f"><label for="f-va">VA disability claim</label><select id="f-va"><option value="yes" selected>I plan to file, or might</option><option value="no">I won't file</option></select></div>
+        <div class="f"><label for="f-move">Final move</label><select id="f-move"><option value="und" selected>Not decided yet</option><option value="gov">Navy movers ship my things</option><option value="ppm">I'll move myself (PPM)</option><option value="both">Some of each</option><option value="none">Not moving</option></select></div>
+        <div class="f"><label for="f-state">State you'll live in after (optional)</label><input type="text" id="f-state" maxlength="30" autocomplete="off" placeholder="e.g. Connecticut"></div>
+      </div>
+      <div class="yn">
+        <label><input type="checkbox" class="box" id="f-married"> <span>I'm married or have dependents</span></label>
+        <label><input type="checkbox" class="box" id="f-sb"> <span>I'm considering SkillBridge</span></label>
+        <label><input type="checkbox" class="box" id="f-fed"> <span>I may apply for federal civilian jobs</span></label>
+        <label><input type="checkbox" class="box" id="f-clr"> <span>I hold a security clearance</span></label>
+        <label><input type="checkbox" class="box" id="f-nuke"> <span>I'm nuclear-trained</span></label>
+      </div>
+      <p class="err" id="f-err" hidden></p>
+      <div class="actions">
+        <button type="submit" class="btn">Build my plan</button>
+        <button type="button" class="btn ghost" id="cancel-btn" hidden>Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="strip" id="strip" data-view="home"></section>
+
+  <section class="card" id="next-card" data-view="home">
+    <h2>Up next</h2>
+    <ul class="upnext" id="next-list"></ul>
+    <div class="actions"><button type="button" class="btn" id="open-check">Open checklist</button></div>
+  </section>
+
+  <div class="mini" id="local-mini" data-view="home"></div>
+
+  <section class="card" id="local-card" data-view="help">
+    <h2 id="local-title">Local help</h2>
+    <p class="small" id="local-sub"></p>
+    <div class="local" id="local"></div>
+  </section>
+
+  <div class="cols">
+    <section class="card" id="timeline-card" data-view="dates">
+      <h2>Key dates</h2>
+      <p class="small">Brass dots are hard deadlines.</p>
+      <div class="tl" id="timeline"></div>
+      <div class="cal">
+        <h3>Calendar reminders</h3>
+        <p class="small">Get a reminder 7 days before each date and again on the day. The file adds two all-day entries per date to your calendar, which alerts you the way it does for any event.</p>
+        <div class="actions"><button type="button" class="btn ghost" id="cal-btn">Download calendar file</button></div>
+        <p class="small" id="cal-msg" role="status"></p>
+        <textarea id="cal-text" aria-label="Calendar file contents" readonly hidden></textarea>
+        <p class="small">Google Calendar: Settings, then Import &amp; export, then choose the file. Outlook: File, Open &amp; Export, Import/Export, then “Comma Separated Values”. Download again if your dates change.</p>
+      </div>
+    </section>
+
+    <section class="card" id="checklist-card" data-view="checklist">
+      <h2>Checklist</h2>
+      <p class="small">Tick items off, and write what you've decided under “My plan”. Confirm anything Navy-specific with your CCC or CPPA.</p>
+      <div class="tools">
+        <div class="prog"><span class="bar"><i id="prog-bar"></i></span><span id="prog-txt"></span></div>
+        <label class="hide"><input type="checkbox" class="box" id="hide-done"> Hide done</label>
+      </div>
+      <div class="tabs" id="tabs" role="group" aria-label="Show"></div>
+      <ul class="items" id="items"></ul>
+    </section>
+  </div>
+
+  <section class="card backup" data-view="me">
+    <h2>Your saved progress</h2>
+    <p class="small" style="margin-top:4px" id="save-state"></p>
+    <p class="small" style="margin-top:6px">Everything saves automatically on this device each time you change something, and it is still here when you come back. It is not stored anywhere else, so save a backup file now and then. Use that file, or the backup code, to move to a new phone or computer.</p>
+    <div class="actions">
+      <button type="button" class="btn" id="file-btn">Save backup file</button>
+      <label class="btn ghost" for="file-in" style="cursor:pointer">Restore from file</label>
+      <input type="file" id="file-in" accept=".json,application/json" hidden>
+      <button type="button" class="btn ghost" id="copy-btn">Copy backup code</button>
+      <button type="button" class="btn ghost" id="restore-btn">Restore from code</button>
+      <button type="button" class="btn danger" id="reset-btn">Start over</button>
+      <span class="small" id="backup-msg" role="status"></span>
+    </div>
+    <textarea id="backup-code" aria-label="Backup code" placeholder="Paste a backup code here, then choose Restore from code" spellcheck="false"></textarea>
+  </section>
+
+  <p class="foot" data-view="help">Rules were checked against official Navy, DoD and VA sources in October–November 2026 and are linked on each item. Policies change and commands differ, so treat dates as planning targets and confirm with your Command Career Counselor, CPPA and a VA-accredited service officer. Items marked “common practice” are widely recommended steps, not written rules. This page is not an official Navy product.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var DAY = 864e5, KEY = 'sepplanner.v1';
+  var S = {
+    cppa: ['MyNavyHR separations process brief', 'https://www.mynavyhr.navy.mil/Portals/55/Support/PayPers/CPCResources/Separations_Retirements_Process_Jun2025.pdf'],
+    tap: ['NAVADMIN 223/19 (TAP)', 'https://www.mynavyhr.navy.mil/Portals/55/Messages/NAVADMIN/NAV2019/NAV19223.txt'],
+    bdd: ['VA BDD fact sheet', 'https://kimbrough.tricare.mil/Portals/63/Documents/BDDFactSheet.pdf'],
+    shpe: ['Health.mil separation health assessment', 'https://www.health.mil/SHPE'],
+    sb: ['MyNavyHR SkillBridge timeline FAQ', 'https://www.mynavyhr.navy.mil/Portals/55/Career/Transition/Navy%20SkillBridge%20Timeline%20Application%20FAQ.pdf'],
+    leave: ['DoD leave benefits at separation', 'https://militarypay.defense.gov/Benefits/Leave-Benefits-During-Transition'],
+    cool: ['CNA study of Navy COOL', 'https://www.cna.org/analyses/2023/05/effect-of-credentialing-on-sailor-advancement'],
+    hhg: ['NAVSUP separatee move guide', 'https://www.navsup.navy.mil/Portals/65/HHG/Documents/SEPARATEE-%20INVOLUNTARY%20SEPARATEE%20-%202025.pdf'],
+    d3155: ['DD Form 3155', 'https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd3155.pdf'],
+    ppm: ['NAVSUP required PPM documents (2026)', 'https://www.navsup.navy.mil/Portals/65/HHG/Documents/Required%20PPM%20Docs%20-%202026.pdf'],
+    ext: ['NAVSUP shipping extension flyer', 'https://www.navsup.navy.mil/Portals/65/HHG/Documents/Separatee%20shipping%20extension%20flyer%20-%20Feb%202026.pdf'],
+    vow: ['OPM guidance on the VOW Act', 'https://chcoc.gov/sites/default/files/vow-veterans-opportunity-work-hire-heroes-act-2011_06-15-2012_508.pdf'],
+    clr: ['VetraFi on clearance reinstatement', 'https://www.vetrafi.com/education-articles/security-clearance-after-you-separate-military'],
+    chcbp: ['TRICARE CHCBP', 'https://tricare.mil/CHCBP'],
+    vgli: ['VA life insurance fact sheet', 'https://www.va.gov/files/2019-07/VA-Toolkit-9-Life-Insurance-Fact-Sheet-508.pdf'],
+    ucx: ['VetraFi on UCX', 'https://www.vetrafi.com/education-articles/unemployment-compensation-ex-servicemembers-ucx'],
+    irr: ['Navy Reserve IRR page', 'https://www.navyreserve.navy.mil/Resources/-IRR-Individual-Ready-Reserve/'],
+    fsgli: ['Navy FSGLI page', 'https://www.mynavyhr.navy.mil/Support-Services/Casualty/FSGLI/'],
+    eye: ['SECNAV 6810.1 (eyewear)', 'https://www.med.navy.mil/Portals/62/Documents/NMFA/NMLC/Nostra/6810.pdf'],
+    cp: ['Common practice', '']
+  };
+  var FL = { nm: 'Florida Dept. of Veterans’ Affairs service officers', ph: '727-319-7440', dt: 'Statewide claims help by phone or video; calls returned within 24 hours. Email FDVA.VSO@FDVA.FL.GOV. Your county veteran service office also files claims.', url: 'https://floridavets.org/' };
+  var WA = { nm: 'Washington Dept. of Veterans Affairs claims help', ph: '800-562-2308', dt: 'Books you with a service officer in your county, in person or virtual. Email benefits@dva.wa.gov.', url: 'https://dva.wa.gov/resources/county-map' };
+  var BASES = [
+    ['norfolk', 'Naval Station Norfolk, VA', { nm: 'Fleet and Family Support Center Norfolk', ph: '757-444-2102', dt: '7928 14th Street, Suite 102, Norfolk, VA 23505 · Mon–Fri 8:00–4:30' }, { nm: 'Virginia Dept. of Veterans Services, Norfolk Benefits Office', ph: '757-455-0814', dt: '6350 Center Drive, Building 5, Suite 100, Norfolk, VA 23502 · veterans seen 8:30–3:00, walk-ins 8:30–11:00', url: 'https://www.dvs.virginia.gov/' }],
+    ['oceana', 'NAS Oceana / Dam Neck, VA', { nm: 'Fleet and Family Support Center Oceana', ph: '757-433-2912', dt: '1896 Laser Road, Suite 120, Bldg 531, Virginia Beach, VA 23460 · Mon–Thu 8:00–5:00, Fri 8:00–2:30' }, { nm: 'Virginia Dept. of Veterans Services, Virginia Beach (Oceana) office', ph: '757-689-3729', dt: '1232 Perimeter Parkway, Suite 202, Virginia Beach, VA 23454 · veterans seen 8:30–3:00', url: 'https://www.dvs.virginia.gov/' }],
+    ['sandiego', 'Naval Base San Diego, CA', { nm: 'Fleet and Family Support Center San Diego', ph: '866-923-6478', dt: '3005 Corbina Alley, Building 263, San Diego, CA 92136 · Mon–Fri 7:30–4:30' }, { nm: 'San Diego County Office of Military & Veterans Affairs', ph: '866-726-8831', dt: 'Prepares and submits VA claims. Offices at 5055 Ruffin Road, San Diego, and 401 Mile of Cars Way, National City · Mon–Fri 8–5', url: 'https://www.sandiegocounty.gov/content/sdc/hhsa/programs/ais/veterans_services/' }],
+    ['coronado', 'Naval Base Coronado / North Island, CA', { nm: 'Fleet and Family Support Center Coronado', ph: '619-545-6071', dt: 'Saufley Street, Bldg 318, San Diego, CA 92135 · Mon–Fri 7:30–4:30' }, { nm: 'San Diego County Office of Military & Veterans Affairs', ph: '866-726-8831', dt: 'Prepares and submits VA claims. Offices at 5055 Ruffin Road, San Diego, and 401 Mile of Cars Way, National City · Mon–Fri 8–5', url: 'https://www.sandiegocounty.gov/content/sdc/hhsa/programs/ais/veterans_services/' }],
+    ['lemoore', 'NAS Lemoore, CA', { nm: 'Fleet and Family Support Center Lemoore', ph: '559-998-4688', dt: '966 Franklin Avenue, NAS Lemoore, CA 93246 · Mon–Fri 8:00–4:30' }, { nm: 'Kings County Veterans Services Office', ph: '559-852-2669', dt: '1400 W. Lacey Blvd., Law Building #4, Hanford, CA 93230 · Mon–Thu 8–5, Fri 8–12', url: 'https://www.countyofkingsca.gov/departments/general-services/veterans-services' }],
+    ['jax', 'NAS Jacksonville, FL', { nm: 'Fleet and Family Support Center Jacksonville', ph: '904-542-5745', dt: '27 Ranger Street, Bldg 27, NAS Jacksonville, FL 32212 · Mon–Wed 7:30–4:00, Thu 10:00–4:00, Fri 7:30–3:00' }, FL],
+    ['mayport', 'Naval Station Mayport, FL', { nm: 'Fleet and Family Support Center Mayport', ph: '904-270-6600', dt: 'Bldg. 1, Massey Avenue, Jacksonville, FL 32228 · Mon–Thu 7:30–4:00, Fri 7:30–3:00' }, FL],
+    ['pensacola', 'NAS Pensacola, FL', { nm: 'Fleet and Family Support Center Pensacola', ph: '850-452-5990', dt: '151 Ellyson Avenue, Building 625, NAS Pensacola, FL 32508 · Mon–Fri 7:30–4:00' }, FL],
+    ['kingsbay', 'Naval Submarine Base Kings Bay, GA', { nm: 'Fleet and Family Support Center Kings Bay', ph: '912-573-4513', dt: '920 USS James Madison Road, Kings Bay, GA 31547 · Mon–Wed 7:30–4:00, Thu 8:30–4:00, Fri 7:30–3:30' }, { nm: 'Georgia Dept. of Veterans Service, Kings Bay field office', ph: '912-573-1856', dt: 'On base at 1063 USS Tennessee Ave, Kings Bay, GA 31547 · Mon–Fri 9:00–4:30', url: 'https://veterans.georgia.gov/' }],
+    ['newlondon', 'Naval Submarine Base New London, CT', { nm: 'Fleet and Family Support Center New London', ph: '860-694-3383', dt: 'Building 83, Grayling Ave, Room 102, Groton, CT 06340 · Mon–Fri 7:30–4:00' }, { nm: 'Connecticut Dept. of Veterans Affairs, Norwich service office', ph: '860-887-9162', dt: 'City Hall, 100 Broadway, Room 305, Norwich, CT 06360. Files VA claims and represents you at no cost.', url: 'https://portal.ct.gov/DVA/advocacy-and-assistance' }],
+    ['greatlakes', 'Naval Station Great Lakes, IL', { nm: 'Fleet and Family Support Center Great Lakes', ph: '847-688-3603', dt: '525 Farragut Avenue, Suite 300, Building 26, Great Lakes, IL 60088 · Mon–Fri 7:30–4:00 · TAP questions: nsgltap@us.navy.mil' }, { nm: 'Illinois Dept. of Veterans Affairs service officers', ph: '', dt: 'Use the state’s county lookup to find the service officer for Lake County.', url: 'https://veterans.illinois.gov/serviceoffices/vso-locator-countylist.html' }],
+    ['kitsap', 'Naval Base Kitsap (Bremerton / Bangor), WA', { nm: 'Fleet and Family Support Center Kitsap', ph: '360-627-2412', dt: '120 South Dewey Street, Building 491, Bremerton, WA 98314 · Mon–Thu 7:30–5:00, Fri 7:30–4:00' }, WA],
+    ['everett', 'Naval Station Everett, WA', { nm: 'Fleet and Family Support Center Everett', ph: '425-304-3735', dt: '2000 W Marine Drive, Bldg 2000, Room 156, Everett, WA 98207 · Mon–Wed, Fri 8:00–4:00, Thu 10:00–4:00' }, WA],
+    ['whidbey', 'NAS Whidbey Island, WA', { nm: 'Fleet and Family Support Center Whidbey Island', ph: '360-257-6923', dt: '3675 W Lexington Street, Building 2556, Oak Harbor, WA 98278 · Mon–Thu 7:30–5:00, Fri 7:30–4:00' }, WA],
+    ['pearl', 'Joint Base Pearl Harbor-Hickam, HI', { nm: 'Military and Family Support Center (Navy)', ph: '808-474-1999', dt: '4827 Bougainville Drive, 2nd Floor, Honolulu, HI 96818 · Mon–Fri 7:30–4:00' }, { nm: 'Hawaii Office of Veterans’ Services, Oʻahu office', ph: '808-433-0420', dt: 'Tripler Army Medical Center, 459 Patterson Road, E-Wing, Room 1-A103, Honolulu · Mon–Fri 7:45–4:30, walk-ins Mon and Wed 8–12', url: 'https://dod.hawaii.gov/ovs/' }]
+  ];
+  var NATIONAL = [
+    { nm: 'Find a VA-accredited representative', ph: '', dt: 'VA’s search for accredited service officers near any ZIP code.', url: 'https://www.va.gov/get-help-from-accredited-representative/find-rep/' },
+    { nm: 'VA benefits line', ph: '800-827-1000', dt: 'Claim questions, Mon–Fri 8 a.m.–9 p.m. ET. Book a regional office visit online.', url: 'https://va.my.site.com/VAVERA/s/' },
+    { nm: 'Navy Household Goods', ph: '855-444-6683', dt: 'Move counseling, pack-out problems, PPM claims and shipping extensions.', url: 'https://www.navsup.navy.mil/household' },
+    { nm: 'Military OneSource', ph: '800-342-9647', dt: 'Free transition, tax and counseling help, and contacts for any installation.', url: 'https://installations.militaryonesource.mil/' },
+    { nm: 'Navy Reserve PERS-93', ph: '800-535-2699', dt: 'Questions about the Individual Ready Reserve after you separate.', url: '' }
+  ];
+  var any = function () { return true; };
+  var moving = function (p) { return p.move !== 'none'; };
+  var va = function (p) { return p.va === 'yes'; };
+  // t: task | decide | info | confirm.  base: sep (EAOS) or out (last day at command).  off: days.  lead: days before due when it becomes "Do now".
+  var ITEMS = [
+    { id: 'tap-ic', ph: 'tap', t: 'confirm', base: 'sep', off: -365, title: 'Confirm Initial Counseling and pre-separation counseling are on your DD 2648', notes: 'Both are required 365 or more days before separation. If either is missing, see your Command Career Counselor now. Capstone can’t be signed off without them.', src: S.tap },
+    { id: 'tap-core', ph: 'tap', t: 'task', base: 'sep', off: -120, lead: 245, title: 'Complete the TAP core curriculum', notes: 'Transition Day, the VA benefits briefing and the Department of Labor employment day, booked through Fleet and Family Support Center.', src: S.tap },
+    { id: 'capstone', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Complete Capstone at Fleet and Family Support Center', notes: 'Due no later than 90 days before separation. Bring your Individual Transition Plan, resume and DD 2648.', src: S.tap },
+    { id: 'str', ph: 'tap', t: 'task', base: 'sep', off: -150, lead: 60, title: 'Get a full copy of your service treatment records', notes: 'Ask medical records for your whole record, plus dental. Check that it has your MEPS entrance physical, periodic health assessments, hearing tests and any outside (network) care. Keep your own copy whether or not you file a VA claim.', src: S.bdd },
+    { id: 'vso', ph: 'tap', t: 'task', base: 'sep', off: -165, lead: 60, title: 'Book a free VA-accredited service officer', notes: 'DAV, VFW, American Legion and state veterans offices review your conditions list and file with you at no cost. Ask Fleet and Family who covers your base, and confirm the person is VA-accredited.', src: S.bdd, when: va },
+    { id: 'bdd', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'File your VA disability claim through BDD (VA Form 21-526EZ)', notes: 'Benefits Delivery at Discharge is open from 180 to 90 days before separation. File online at VA.gov with your treatment records and the Separation Health Assessment Part A. You must be available for VA exams for 45 days after filing, so file before terminal leave or travel.', late: 'The BDD window has closed for your date. You can still file a standard pre-discharge claim on VA.gov before you separate, or file after. It is decided more slowly but pays back to the day after separation if filed within a year.', src: S.bdd, when: va },
+    { id: 'shpe', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Start your separation physical (DD 2807-1, then the exam)', notes: 'Required for everyone. If you’re filing a VA claim, schedule it no later than 90 days out. The VA’s exam can count as your separation physical if it is in your record 30 or more days before separation.', src: S.shpe },
+    { id: 'sb', ph: 'tap', t: 'decide', base: 'sep', off: 0, title: 'Decide on SkillBridge and apply', notes: '', src: S.sb, when: function (p) { return p.sb; } },
+    { id: 'leave', ph: 'tap', t: 'decide', base: 'out', off: -75, title: 'Decide: terminal leave or sell leave back', notes: 'You can sell back up to 60 days over a career. Terminal leave moves your last day at the command earlier, which pulls your paperwork, physical and VA exam dates forward with it. Update “last working day” above once you decide.', src: S.leave },
+    { id: 'ptdy', ph: 'tap', t: 'info', base: 'sep', off: 0, title: 'No job or house-hunting PTDY at a normal EAOS', notes: 'Transition PTDY is for involuntary separations and retirements. Plan regular or terminal leave for interviews and moving.', src: S.leave },
+    { id: 'cool', ph: 'tap', t: 'info', base: 'sep', off: -365, title: 'Navy COOL needs a year left on your contract', notes: 'You must have at least a year remaining when you apply for certification funding. After you’re out, the GI Bill can reimburse license and certification exam fees.', src: S.cool },
+    { id: 'rad', ph: 'tap', t: 'task', base: 'out', off: -30, lead: 90, title: 'Request your radiation exposure history', notes: 'Ask RADCON or medical for a copy of your lifetime exposure record before you check out. Civilian nuclear employers often ask for it.', src: S.cp, when: function (p) { return p.nuke; } },
+
+    { id: 'pk-start', ph: 'package', t: 'task', base: 'out', off: -150, lead: 120, title: 'Start your separation package with your CPPA (NPPSC 1900/2 checklist)', notes: 'Navy guidance is to start 5 to 9 months before you leave the command. Bring your DD 2648 and Capstone status.', src: S.cppa },
+    { id: 'pk-auth', ph: 'package', t: 'task', base: 'out', off: -120, lead: 60, title: 'Get your separation authorization on file and confirm no PCS orders are open', notes: 'CPPAs won’t submit a package without the authorization letter or message. Open PCS orders conflict with separation processing.', src: S.cppa },
+    { id: 'pk-quest', ph: 'package', t: 'task', base: 'out', off: -90, lead: 45, title: 'Complete the NPPSC 1900/1 Separations Questionnaire', notes: 'Medical and dental endorse it first. Blocks 1–17 are needed to cut orders, and your answers flow straight onto your DD 214, so check them carefully. Keep medical records out of the package.', src: S.cppa },
+    { id: 'pk-leave', ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Request separation leave the way your CPPA directs', notes: 'Confirm your leave balance first and note it on the 1900/1. Guidance has differed on whether it goes through NSIPS e-leave or the TSC, so ask. Leave ends at 2359 on your last day of active duty.', src: S.cppa, when: function (p, c) { return c.out < c.sep; } },
+    { id: 'pk-tsc', ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Package actionable at the TSC', notes: 'It must be complete at least 60 days before you leave the command. A late package can leave your DD 214 marked “Signature Unattainable”.', src: S.cppa },
+    { id: 'dd214', ph: 'package', t: 'task', base: 'out', off: -15, lead: 30, title: 'Verify your DD 214 worksheet in NSIPS, then sign', notes: 'Check character of service, dates, awards, NECs and schools. Mark it accurate or send it back with corrections. Print and keep copies 1 and 4. You need Member-4 for unemployment, the VA and employers.', src: S.cppa },
+
+    { id: 'mv-decide', ph: 'move', t: 'decide', base: 'out', off: -75, title: 'Decide where you’ll live and how you’ll move', notes: 'You can ship to your home of record or the place you entered active duty. Options are Navy-arranged movers, a move you do yourself (PPM), or a mix up to your weight allowance. A PPM pays no more than the government’s cost.', src: S.hhg, when: moving },
+    { id: 'mv-3155', ph: 'move', t: 'task', base: 'out', off: -60, lead: 45, title: 'Do transportation counseling and sign DD Form 3155', notes: 'Do this as soon as orders are out. The form sets out your 180-day shipping and storage limits.', src: S.d3155, when: moving },
+    { id: 'mv-fam', ph: 'move', t: 'task', base: 'out', off: -90, lead: 45, title: 'Make sure your dependents are on your separation orders', notes: 'It raises your weight allowance and covers their travel. Tell your CPPA and the transportation office before orders are cut.', src: S.cp, when: function (p) { return p.married && moving(p); } },
+    { id: 'mv-dps', ph: 'move', t: 'task', base: 'out', off: -45, lead: 30, title: 'Create your DPS account and submit your move application', notes: 'At dps.move.mil with your orders number, issue date and issuing authority. Book early because summer pack dates fill up. DPS is also where you track the shipment and file a damage claim.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-pack', ph: 'move', t: 'task', base: 'out', off: -10, lead: 30, title: 'Pre-move survey and pack-out', notes: 'The moving company confirms pack dates at the survey. If you haven’t heard from them within 14 days of pack-out, call your Personal Property Office at 855-444-6683.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-ppm', ph: 'move', t: 'task', base: 'sep', off: 180, lead: 200, title: 'For a PPM: keep weight tickets and receipts, then file the claim', notes: 'You need two certified weight tickets (empty and full) for each trip, truck and storage receipts, vehicle registration, DD 2278 from counseling, a signed DD 1351-2, NPPSC 7000-1 and your orders. Without a CAC, email hhgaudit.ppmclaims@us.navy.mil for a secure DoD SAFE upload link. Don’t email documents with personal information directly.', src: S.ppm, when: function (p) { return p.move === 'ppm' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-claim', ph: 'move', t: 'task', base: 'sep', off: 180, lead: 180, title: 'File your separation travel claim (DD 1351-2)', notes: 'Travel to your home of record must be finished within 180 days. Attach orders, the EFT form and receipts of $75 or more, and send it to MyNavy Career Center. A travel advance still has to be settled with a claim.', src: S.cppa },
+    { id: 'mv-ext', ph: 'move', t: 'info', base: 'sep', off: 180, title: 'Need longer to move? Ask for an extension before day 180', notes: 'Extensions are for school, medical treatment or events outside your control, not convenience. Send a signed letter, separation orders, DD 214 and supporting documents. Free storage also ends at 180 days.', src: S.ext, when: moving },
+    { id: 'mv-dmg', ph: 'move', t: 'task', base: 'sep', off: 185, lead: 185, title: 'Inspect your delivery and file any damage claim in DPS', notes: 'Note damage on the delivery paperwork at the door, then file promptly.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+
+    { id: 'resume', ph: 'career', t: 'task', base: 'sep', off: -150, lead: 120, title: 'Build a civilian resume and pull your JST and VMET', notes: 'Your Joint Services Transcript and Verification of Military Experience and Training (DD 2586) translate schools and jobs into civilian terms. Fleet and Family reviews resumes for free.', src: S.cp },
+    { id: 'apply', ph: 'career', t: 'task', base: 'sep', off: -60, lead: 120, title: 'Apply for jobs, with a start date after you separate', notes: 'Many employers hire 2 to 4 months out. You can usually start work during terminal leave. If you’re going to school, apply for admission and GI Bill benefits on the same timeline.', src: S.cp },
+    { id: 'vow', ph: 'career', t: 'task', base: 'sep', off: -100, lead: 20, title: 'Get a statement of service and start federal applications', notes: 'Under the VOW Act, agencies treat you as a veterans’ preference eligible once a statement of service shows you will separate honorably within 120 days. Ask your admin office for the letter.', src: S.vow, when: function (p) { return p.fed; } },
+    { id: 'clr', ph: 'career', t: 'info', base: 'clr', off: 0, title: 'Your clearance can be reinstated for about 24 months', notes: 'Access ends at separation. A cleared employer can usually reinstate it without a new investigation if the break is under 24 months and your investigation is still current.', src: S.clr, when: function (p) { return p.clr; } },
+    { id: 'quals', ph: 'career', t: 'task', base: 'out', off: -30, lead: 90, title: 'Collect proof of your nuclear quals and watchstations', notes: 'Ask your chain for a signed letter summarizing qualifications, watchstations and supervisory roles, and keep your evals. Check with security on what can leave the command.', src: S.cp, when: function (p) { return p.nuke; } },
+    { id: 'records', ph: 'career', t: 'task', base: 'out', off: -14, lead: 90, title: 'Download your records while you still have a CAC', notes: 'OMPF, ESR, every eval and award, training record, JST and recent LESs. Access is much harder afterward.', src: S.cp },
+
+    { id: 'eval', ph: 'forgot', t: 'task', base: 'out', off: -45, lead: 60, title: 'Make sure your final eval and any end-of-tour award are submitted', notes: 'Both need to reach your record before you go.', src: S.cp },
+    { id: 'dental', ph: 'forgot', t: 'task', base: 'out', off: -15, lead: 120, title: 'Use dental, vision and pharmacy while they’re free', notes: 'Cleaning and any dental work, an eye exam, and prescription refills. Active duty can order one frame-of-choice pair of glasses a year plus standard-issue pairs.', src: S.eye },
+    { id: 'health', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Line up health coverage for the day after you separate', notes: 'A normal end-of-enlistment separation usually doesn’t qualify for the 180 days of transitional TRICARE (TAMP). Options are an employer plan, CHCBP, VA health care or a marketplace plan. Dental and vision end at separation too.', src: S.chcbp },
+    { id: 'fam', ph: 'forgot', t: 'task', base: 'sep', off: -30, lead: 90, title: 'Plan your family’s coverage and benefits', notes: 'Your dependents’ TRICARE ends when yours does, so the plan you choose has to cover them. Add them to your VA claim (it raises pay at a 30% rating or higher). If your spouse has FSGLI, it can be converted to their own policy within 120 days of separation.', src: S.fsgli, when: function (p) { return p.married; } },
+    { id: 'addr', ph: 'forgot', t: 'task', base: 'out', off: -15, lead: 45, title: 'Update your mailing address in milConnect and myPay', notes: 'Your DD 214, final W-2 and VA letters go to the address on file. Set up a myPay login that doesn’t need a CAC.', src: S.cp },
+    { id: 'gtc', ph: 'forgot', t: 'task', base: 'out', off: -30, lead: 45, title: 'Close your Government Travel Card and settle open travel vouchers', notes: 'Open balances follow you out.', src: S.cp },
+    { id: 'legal', ph: 'forgot', t: 'task', base: 'out', off: -45, lead: 60, title: 'Visit base legal about your lease, will and power of attorney', notes: 'Ask whether separation orders let you end your lease early, and update documents while legal help is free.', src: S.cp },
+    { id: 'checkout', ph: 'forgot', t: 'task', base: 'out', off: -3, lead: 30, title: 'Finish your command check-out sheet', notes: 'Turn in issued gear and dosimetry, clear base housing or barracks, and get your security debrief.', src: S.cp },
+    { id: 'les', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 30, title: 'Check your final LES and last pay', notes: 'Look for leave sell-back, any debts such as advances or excess shipping weight, and the final pay date.', src: S.cp },
+    { id: 'reserve', ph: 'forgot', t: 'decide', base: 'out', off: -45, title: 'Decide whether to join the drilling Navy Reserve', notes: 'Optional. Talk to a Navy Reserve career transition counselor before you separate if you’re considering it.', src: S.cp },
+    { id: 'irr', ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Any remaining service obligation moves to the IRR', notes: 'If you haven’t finished your 8-year obligation, you’re in the Individual Ready Reserve after separation. Answer official mail, keep recall information current and complete the annual screening. Questions go to PERS-93 at 800-535-2699.', src: S.irr },
+    { id: 'resid', ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Sort out your state residency', notes: 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check income tax, vehicle registration and driver’s license rules for the state you’ll live in.', src: S.cp },
+    { id: 'binder', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Build a separation binder, paper and digital', notes: 'Orders, DD 214 Member-4, medical and dental records, qualifications, move paperwork, travel claim receipts and your VA claim.', src: S.cp },
+
+    { id: 'ucx', ph: 'after', t: 'task', base: 'sep', off: 7, lead: 7, title: 'File for unemployment (UCX) if you’re not working yet', notes: 'File with your state the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.', src: S.ucx },
+    { id: 'rating', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Watch for your VA rating decision', notes: 'BDD claims are usually decided soon after discharge. You have a year to ask for a review if you disagree.', src: S.bdd, when: va },
+    { id: 'vahc', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Apply for VA health care and a Veteran ID card', notes: 'Once you have your DD 214. Also look up your state’s veteran benefits, which vary widely.', src: S.cp },
+    { id: 'record214', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Record your DD 214 with your town or county clerk', notes: 'Many clerks record it free as a confidential record, so you can get certified copies later. In some states it is how you claim a veterans’ property tax exemption.', src: S.cp },
+    { id: 'chcbp', ph: 'after', t: 'task', base: 'sep', off: 60, lead: 60, title: 'Enroll in CHCBP if you have no other health plan', notes: 'You have 60 days from losing TRICARE. It is premium-based, covers the same as TRICARE Select, and lasts 18 to 36 months.', src: S.chcbp },
+    { id: 'gibill', ph: 'after', t: 'decide', base: 'sep', off: 90, title: 'Decide how to use your GI Bill', notes: 'It covers degrees, some training programs and certification exam fees. Check your remaining entitlement at VA.gov.', src: S.cp },
+    { id: 'tsp', ph: 'after', t: 'decide', base: 'sep', off: 90, title: 'Decide what to do with your TSP', notes: 'It can stay where it is, or roll into a new employer plan or IRA. There is no deadline, but contributions and matching stop at separation.', src: S.cp },
+    { id: 'sgli', ph: 'after', t: 'info', base: 'sep', off: 120, title: 'Free SGLI coverage ends', notes: 'SGLI continues at no cost for 120 days after separation.', src: S.vgli },
+    { id: 'vgli', ph: 'after', t: 'task', base: 'sep', off: 240, lead: 240, title: 'Convert to VGLI or buy private life insurance', notes: 'Apply for VGLI within 240 days and there are no health questions. The final deadline is 1 year and 120 days after separation.', src: S.vgli }
+  ];
+  var PHASES = [['next', 'Do now'], ['tap', 'Transition & medical'], ['package', 'Separation paperwork'], ['move', 'Move & travel'], ['career', 'Career & records'], ['forgot', 'Often forgotten'], ['after', 'After you’re out'], ['plans', 'My plans'], ['all', 'All']];
+
+  // ---------- state ----------
+  var st = { profile: null, done: {}, plans: {} }, ui = { tab: 'next', hide: false, editing: false, view: 'home' };
+  var VIEWS = ['home', 'checklist', 'dates', 'help', 'me'];
+  function go(v) { if (VIEWS.indexOf(v) < 0) v = 'home'; ui.view = v; try { if (location.hash !== '#' + v) location.hash = v; } catch (e) {} render(); try { window.scrollTo(0, 0); } catch (e) {} }
+  function load() { try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && typeof r === 'object') st = { profile: r.profile || null, done: r.done || {}, plans: r.plans || {}, savedAt: r.savedAt || '' }; } catch (e) {} }
+  var saveOk = true;
+  var askedPersist = false;
+  function save() {
+    try { st.savedAt = new Date().toISOString(); localStorage.setItem(KEY, JSON.stringify(st)); saveOk = true; } catch (e) { saveOk = false; }
+    if (saveOk && !askedPersist) { askedPersist = true; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {} }
+    showSaved();
+  }
+  function showSaved() {
+    var n = document.getElementById('save-state'); if (!n) return;
+    if (!saveOk) n.textContent = 'This browser is blocking saving (private window or blocked site data). Your changes will be lost when you close the page.';
+    else if (st.savedAt) n.textContent = 'Last saved on this device ' + new Date(st.savedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.';
+    else n.textContent = 'Nothing saved yet. Enter your info to start.';
+  }
+  function adopt(o) {
+    if (!o || typeof o !== 'object' || (o.profile && parse(o.profile.sep) === null)) throw 0;
+    st = { profile: o.profile || null, done: o.done || {}, plans: o.plans || {} }; save(); ui.editing = false;
+    if (st.profile) fillForm(st.profile);
+  }
+
+  // ---------- dates ----------
+  function today() { var n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function parse(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null; }
+  function iso(ms) { return new Date(ms).toISOString().slice(0, 10); }
+  function fmt(ms) { return new Date(ms).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }); }
+  function addYears(ms, y) { var d = new Date(ms); return Date.UTC(d.getUTCFullYear() + y, d.getUTCMonth(), d.getUTCDate()); }
+  function rel(ms) { var d = Math.round((ms - today()) / DAY); if (d === 0) return 'today'; var n = Math.abs(d).toLocaleString('en-US') + ' day' + (Math.abs(d) === 1 ? '' : 's'); return d > 0 ? 'in ' + n : n + ' ago'; }
+
+  function exampleProfile() { return { name: '', base: 'norfolk', sep: iso(today() + 200 * DAY), out: '', grade: 'e69', va: 'yes', move: 'gov', state: '', married: false, sb: true, fed: true, clr: true, nuke: false }; }
+  function ctx(p) { var sep = parse(p.sep), out = parse(p.out); if (out === null || out > sep) out = sep; return { sep: sep, out: out, tier: p.grade === 'e5' ? 180 : 120 }; }
+  function due(it, p, c) {
+    if (it.id === 'sb') return c.sep - (c.tier + 21) * DAY;
+    if (it.base === 'clr') return addYears(c.sep, 2);
+    return (it.base === 'out' ? c.out : c.sep) + it.off * DAY;
+  }
+  function notes(it, p, c, d) {
+    if (it.id === 'sb') return 'The Navy caps SkillBridge plus any terminal leave after it at ' + c.tier + ' days before separation for your paygrade' + (p.grade === 'e5' ? ' (confirm the E-5-and-below figure with your CCC)' : '') + ', so your earliest start is ' + fmt(c.sep - c.tier * DAY) + '. The application window opens 365 days out, and it must be submitted at least 3 weeks before your start date. Command approval is not guaranteed.';
+    if (it.id === 'ucx' && p.state) return 'File with ' + p.state + ' the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.';
+    if (it.id === 'resid' && p.state) return 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check ' + p.state + '’s income tax, vehicle registration and driver’s license rules.';
+    if (it.late && d < today()) return it.late;
+    return it.notes;
+  }
+  function status(it, d, c) {
+    if (st.done[it.id]) return ['Done', 'ok'];
+    if (it.t === 'info') return ['Heads up', ''];
+    if (it.t === 'confirm') return ['Confirm done', 'ok'];
+    if (it.t === 'decide') return ['Decide', 'dec'];
+    if (d < today()) return ['Past due', 'late'];
+    if (today() >= d - (it.lead || 45) * DAY) return ['Do now', 'now'];
+    if (it.ph === 'after') return ['After you’re out', ''];
+    return ['Upcoming', ''];
+  }
+  function isNext(it, d, c) {
+    if (st.done[it.id]) return false;
+    var s = status(it, d, c)[0];
+    if (s === 'Past due' || s === 'Do now' || s === 'Confirm done') return true;
+    return s === 'Decide' && d - today() <= 90 * DAY;
+  }
+  function milestones(p, c) {
+    var m = [
+      [c.sep - 365 * DAY, 'TAP counseling due (365 days)', 'dl'],
+      [c.sep - 180 * DAY, 'VA claim (BDD) window opens (180 days)', '', va(p)],
+      [c.sep - c.tier * DAY, 'Earliest SkillBridge start (' + c.tier + ' days)', '', p.sb],
+      [c.sep - 120 * DAY, 'Federal jobs: veterans’ preference by statement of service (120 days)', '', p.fed],
+      [c.sep - 90 * DAY, va(p) ? 'BDD window closes · Capstone due (90 days)' : 'Capstone due (90 days)', 'dl'],
+      [c.out - 150 * DAY, 'Start separation package (5 months before leaving)', 'dl'],
+      [c.out - 60 * DAY, 'Package actionable at the TSC (60 days before leaving)', 'dl'],
+      [c.sep - 30 * DAY, 'VA exam in your record to count as separation physical (30 days)', 'dl', va(p)],
+      [c.out, 'Last working day at your command', '', c.out < c.sep],
+      [c.sep, 'Separation (EAOS)', 'sep'],
+      [c.sep + 60 * DAY, 'CHCBP enrollment deadline (60 days)', 'dl'],
+      [c.sep + 120 * DAY, 'Free SGLI coverage ends (120 days)', ''],
+      [c.sep + 180 * DAY, 'Last day to ship household goods and travel on orders (180 days)', 'dl'],
+      [c.sep + 240 * DAY, 'VGLI without health questions closes (240 days)', 'dl'],
+      [addYears(c.sep, 1) + 120 * DAY, 'Final VGLI deadline (1 year 120 days)', ''],
+      [addYears(c.sep, 2), 'Clearance reinstatement window closes (about 24 months)', '', p.clr]
+    ];
+    return m.filter(function (r) { return r[3] === undefined || r[3]; }).sort(function (a, b) { return a[0] - b[0]; });
+  }
+
+  // ---------- render ----------
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+  function render() {
+    var real = !!st.profile, p = st.profile || exampleProfile(), c = ctx(p), t = today();
+    var list = ITEMS.filter(function (it) { return !it.when || it.when(p, c); }).map(function (it) { return { it: it, d: due(it, p, c) }; });
+
+    // views
+    Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (n) { n.hidden = n.getAttribute('data-view') !== ui.view; });
+    Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function (b) { if (b.getAttribute('data-go') === ui.view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+
+    // setup card
+    if (real) { $('example-banner').hidden = true; $('intro').hidden = true; }
+    if (!real) $('example-text').textContent = 'It shows the plan for someone separating on ' + fmt(c.sep) + '.';
+    var showForm = !real || ui.editing;
+    $('setup').hidden = !showForm; $('summary').hidden = showForm; $('cancel-btn').hidden = !real;
+    if (real) {
+      $('sum-title').textContent = (p.name ? p.name + '’s plan' : 'Your plan') + ' · separating ' + fmt(c.sep);
+      var chips = [];
+      var cb0 = BASES.filter(function (b) { return b[0] === p.base; })[0]; if (cb0) chips.push(cb0[1]);
+      chips.push({ e5: 'E-1 to E-5', e69: 'E-6 to E-9', off: 'Officer' }[p.grade]);
+      if (c.out < c.sep) chips.push('Last day at command ' + fmt(c.out));
+      chips.push(va(p) ? 'Filing VA claim' : 'No VA claim');
+      chips.push({ und: 'Move undecided', gov: 'Navy movers', ppm: 'Moving myself', both: 'Movers + PPM', none: 'Not moving' }[p.move]);
+      if (p.married) chips.push('Dependents'); if (p.sb) chips.push('SkillBridge'); if (p.fed) chips.push('Federal jobs'); if (p.clr) chips.push('Clearance'); if (p.nuke) chips.push('Nuclear'); if (p.state) chips.push(p.state);
+      var cw = $('sum-chips'); cw.replaceChildren(); chips.forEach(function (x) { cw.appendChild(el('span', 'chip', x)); });
+    }
+
+    // local help
+    var base = BASES.filter(function (b) { return b[0] === p.base; })[0];
+    $('local-title').textContent = base ? 'Local help near ' + base[1] : 'Help for your separation';
+    $('local-sub').textContent = base ? 'Contact details were checked in November 2026. Call before you go, since hours and offices change.' : 'Choose your command location in “Your info” to see your Fleet and Family office and local claims help. Your base isn’t listed? These work anywhere.';
+    var lw = $('local'); lw.replaceChildren();
+    function group(title, rows) {
+      var g = el('div'); g.appendChild(el('h3', '', title));
+      rows.forEach(function (r) {
+        var d = el('div', 'ct'); d.appendChild(el('div', 'nm', r.nm));
+        if (r.ph) d.appendChild(el('div', 'ph', r.ph));
+        var dt = el('div', 'dt', r.dt);
+        if (r.url) { dt.appendChild(document.createTextNode(' ')); var a = el('a', '', 'Website'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; dt.appendChild(a); }
+        d.appendChild(dt); g.appendChild(d);
+      });
+      lw.appendChild(g);
+    }
+    if (base) {
+      group('On base', [{ nm: base[2].nm, ph: base[2].ph, dt: base[2].dt + '. TAP classes, Capstone, resume help, and who handles VA claims on base.' }]);
+      group('Free VA claims help', [base[3]]);
+    }
+    group(base ? 'Anywhere' : 'National contacts', NATIONAL);
+
+    // home: up next + compact local help
+    var nx = list.filter(function (r) { return isNext(r.it, r.d, c); }).sort(function (a, b) { return a.d - b.d; });
+    $('nav-ct').textContent = nx.length ? String(nx.length) : '';
+    var nl = $('next-list'); nl.replaceChildren();
+    if (!nx.length) nl.appendChild(el('li', '', 'Nothing needs attention right now.'));
+    nx.slice(0, 5).forEach(function (r) {
+      var li = el('li'), dd = Math.round((r.d - t) / DAY);
+      li.appendChild(el('span', 'tt', r.it.title));
+      li.appendChild(el('span', 'dd' + (r.it.t === 'confirm' ? '' : dd < 0 ? ' over' : dd <= 45 ? ' soon' : ''), (r.it.t === 'confirm' ? 'Confirm done' : fmt(r.d) + ' · ' + rel(r.d))));
+      nl.appendChild(li);
+    });
+    if (nx.length > 5) nl.appendChild(el('li', '', 'and ' + (nx.length - 5) + ' more in the checklist'));
+    var mini = $('local-mini'); mini.replaceChildren();
+    var mt = el('span');
+    if (base) { mt.appendChild(el('b', '', 'Fleet and Family ')); mt.appendChild(document.createTextNode(base[2].ph + (base[3].ph ? '  ·  ' : ''))); if (base[3].ph) { mt.appendChild(el('b', '', 'VA claims help ')); mt.appendChild(document.createTextNode(base[3].ph)); } }
+    else mt.textContent = 'Phone numbers for claims help, your move and more.';
+    mini.appendChild(mt);
+    var mb = el('button', 'linkbtn', 'All contacts'); mb.type = 'button'; mb.addEventListener('click', function () { go('help'); }); mini.appendChild(mb);
+
+    // countdown strip
+    var strip = $('strip'); strip.replaceChildren();
+    function stat(k, v, s, cls, txt) { var d = el('div', 'card stat' + (cls ? ' ' + cls : '')); d.appendChild(el('div', 'k', k)); d.appendChild(el('div', 'v' + (txt ? ' txt' : ''), v)); d.appendChild(el('div', 's', s)); strip.appendChild(d); }
+    var left = Math.round((c.sep - t) / DAY);
+    stat(left >= 0 ? 'Days until separation' : 'Days since separation', Math.abs(left).toLocaleString('en-US'), 'EAOS ' + fmt(c.sep));
+    var nextDl = milestones(p, c).filter(function (m) { return (m[2] === 'dl' || m[2] === 'sep') && m[0] >= t; })[0];
+    if (nextDl) stat('Next hard deadline', nextDl[1], fmt(nextDl[0]) + ' · ' + rel(nextDl[0]), 'hot', true);
+    var nextN = list.filter(function (r) { return isNext(r.it, r.d, c); }).length;
+    stat('Items needing attention now', String(nextN), 'Past due, due soon, or waiting on a decision');
+
+    // timeline
+    var tl = $('timeline'); tl.replaceChildren(); var placed = false;
+    function todayRow() { var r = el('div', 'today'); r.appendChild(el('span', 'd', 'Today')); r.appendChild(el('i')); tl.appendChild(r); placed = true; }
+    milestones(p, c).forEach(function (m) {
+      if (!placed && m[0] >= t) todayRow();
+      var r = el('div', 'tlr ' + m[2] + (m[0] < t ? ' past' : ''));
+      r.appendChild(el('div', 'd', fmt(m[0])));
+      var rail = el('div', 'rail'); rail.appendChild(el('span', 'dot')); r.appendChild(rail);
+      var tx = el('div', 't', m[1]); tx.appendChild(el('span', '', rel(m[0])));
+      if (m[0] >= t) { var ga = el('a', '', 'Add to Google Calendar'); ga.href = gcal(m); ga.target = '_blank'; ga.rel = 'noopener'; tx.appendChild(ga); }
+      r.appendChild(tx);
+      tl.appendChild(r);
+    });
+    if (!placed) todayRow();
+
+    // progress + tabs
+    var doneN = list.filter(function (r) { return st.done[r.it.id]; }).length;
+    $('prog-bar').style.width = (list.length ? 100 * doneN / list.length : 0) + '%';
+    $('prog-txt').textContent = doneN + ' of ' + list.length + ' done' + (saveOk ? '' : ' · not saving in this browser');
+    $('hide-done').checked = ui.hide;
+    var hasPlan = function (id) { return !!String(st.plans[id] || '').trim(); };
+    function inTab(r, tab) { return tab === 'all' || (tab === 'next' ? isNext(r.it, r.d, c) : tab === 'plans' ? hasPlan(r.it.id) : r.it.ph === tab); }
+    var tabs = $('tabs'); tabs.replaceChildren();
+    PHASES.forEach(function (ph) {
+      var rows = list.filter(function (r) { return inTab(r, ph[0]); });
+      if (!rows.length && ph[0] !== 'next' && ph[0] !== 'plans') return;
+      var b = el('button', '', ph[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(ui.tab === ph[0]));
+      b.appendChild(el('span', 'n', ph[0] === 'next' || ph[0] === 'plans' ? String(rows.length) : rows.filter(function (r) { return st.done[r.it.id]; }).length + '/' + rows.length));
+      b.addEventListener('click', function () { ui.tab = ph[0]; render(); });
+      tabs.appendChild(b);
+    });
+
+    // items
+    var ul = $('items'); ul.replaceChildren();
+    var shown = list.filter(function (r) { return inTab(r, ui.tab) && !(ui.hide && st.done[r.it.id]); }).sort(function (a, b) { return a.d - b.d; });
+    if (!shown.length) {
+      ul.appendChild(el('li', 'empty', ui.tab === 'next' ? 'Nothing needs attention right now.' : ui.tab === 'plans' ? 'No plans yet. Choose “Add plan” on any item.' : 'Everything here is done.'));
+    }
+    shown.forEach(function (r) {
+      var it = r.it, done = !!st.done[it.id], li = el('li', 'item' + (done ? ' done' : ''));
+      var cb = el('input', 'box'); cb.type = 'checkbox'; cb.id = 'c-' + it.id; cb.checked = done;
+      cb.addEventListener('change', function () { if (cb.checked) st.done[it.id] = true; else delete st.done[it.id]; save(); render(); });
+      li.appendChild(cb);
+      var body = el('div'); li.appendChild(body);
+      var head = el('div', 'head'); var lab = el('label', 'ttl', it.title); lab.htmlFor = cb.id; head.appendChild(lab);
+      var s = status(it, r.d, c); head.appendChild(el('span', 'pill ' + s[1], s[0])); body.appendChild(head);
+      var meta = el('div', 'meta'), dd = Math.round((r.d - t) / DAY);
+      meta.appendChild(el('b', '', (it.t === 'info' ? '' : 'Due ') + fmt(r.d)));
+      meta.appendChild(document.createTextNode(' · '));
+      meta.appendChild(el('span', !done && it.t !== 'info' && it.t !== 'confirm' ? (dd < 0 ? 'over' : dd <= 45 ? 'soon' : '') : '', rel(r.d)));
+      meta.appendChild(document.createTextNode(' · '));
+      if (it.src[1]) { var a = el('a', '', it.src[0]); a.href = it.src[1]; a.target = '_blank'; a.rel = 'noopener'; meta.appendChild(a); } else meta.appendChild(document.createTextNode(it.src[0]));
+      body.appendChild(meta);
+      body.appendChild(el('p', 'notes', notes(it, p, c, r.d)));
+      if (hasPlan(it.id) || ui.open === it.id) {
+        var pw = el('div', 'plan'), pl = el('label', '', 'My plan'), ta = el('textarea');
+        ta.id = 'p-' + it.id; pl.htmlFor = ta.id; ta.maxLength = 4000; ta.value = st.plans[it.id] || '';
+        ta.placeholder = it.t === 'decide' ? 'What did you decide? Dates, who you talked to, next step…' : 'Your plan or notes for this item…';
+        var tm; ta.addEventListener('input', function () { st.plans[it.id] = ta.value; clearTimeout(tm); tm = setTimeout(save, 400); });
+        ta.addEventListener('blur', function () { if (!ta.value.trim()) delete st.plans[it.id]; save(); if (ui.open === it.id) ui.open = null; });
+        pw.appendChild(pl); pw.appendChild(ta); body.appendChild(pw);
+        if (ui.open === it.id) setTimeout(function () { ta.focus(); }, 0);
+      } else {
+        var pb = el('button', 'planbtn' + (it.t === 'decide' ? ' ask' : ''), it.t === 'decide' ? '+ Add your decision' : '+ Add plan'); pb.type = 'button';
+        pb.addEventListener('click', function () { ui.open = it.id; render(); });
+        body.appendChild(pb);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- calendar ----------
+  function ymd(ms) { return iso(ms).replace(/-/g, ''); }
+  function mdy(ms) { var x = iso(ms).split('-'); return x[1] + '/' + x[2] + '/' + x[0]; }
+  function gcal(m) { return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(m[1]) + '&dates=' + ymd(m[0]) + '/' + ymd(m[0] + DAY) + '&details=' + encodeURIComponent('Navy separation milestone. From Navy Separation Planner.'); }
+  function calCsv() {
+    var p = st.profile || exampleProfile(), c = ctx(p), t = today(), q = function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; };
+    var rows = [['Subject', 'Start Date', 'All Day Event', 'Description']];
+    milestones(p, c).forEach(function (m) {
+      if (m[0] < t) return;
+      if (m[0] - 7 * DAY >= t) rows.push(['In 7 days: ' + m[1], mdy(m[0] - 7 * DAY), 'True', 'Due ' + fmt(m[0]) + '. Navy separation milestone.']);
+      rows.push(['Today: ' + m[1], mdy(m[0]), 'True', 'Due today, ' + fmt(m[0]) + '. Navy separation milestone.']);
+    });
+    return { text: rows.map(function (r) { return r.map(q).join(','); }).join('\r\n') + '\r\n', n: rows.length - 1 };
+  }
+  function calIcs() {
+    var p = st.profile || exampleProfile(), c = ctx(p), t = today(), n = 0, esc = function (v) { return String(v).replace(/([\\;,])/g, '\\$1'); };
+    var out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Navy Separation Planner//EN', 'CALSCALE:GREGORIAN'];
+    milestones(p, c).forEach(function (m, i) {
+      if (m[0] < t) return; n++;
+      out.push('BEGIN:VEVENT', 'UID:nsp-' + ymd(m[0]) + '-' + i + '@navy-separation-planner', 'DTSTAMP:' + ymd(t) + 'T000000Z', 'DTSTART;VALUE=DATE:' + ymd(m[0]), 'DTEND;VALUE=DATE:' + ymd(m[0] + DAY), 'SUMMARY:' + esc(m[1]), 'DESCRIPTION:Navy separation milestone.',
+        'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc('In 7 days: ' + m[1]), 'TRIGGER:-P6DT15H', 'END:VALARM',
+        'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc('Today: ' + m[1]), 'TRIGGER:PT9H', 'END:VALARM', 'END:VEVENT');
+    });
+    out.push('END:VCALENDAR');
+    return { text: out.join('\r\n') + '\r\n', n: n };
+  }
+  var STANDALONE = !window.claude;
+  var dl = null;
+  try { if (window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then(function (d) { dl = d; }, function () {}); } catch (e) {}
+  $('cal-btn').addEventListener('click', function () {
+    var cm = $('cal-msg'), ta = $('cal-text');
+    if (STANDALONE) {
+      var ics = calIcs(); if (!ics.n) { cm.textContent = 'All of your dates have passed, so there is nothing to add.'; return; }
+      try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics.text], { type: 'text/calendar' })); a.download = 'navy-separation-reminders.ics'; document.body.appendChild(a); a.click(); a.remove();
+        cm.textContent = 'Saved ' + ics.n + ' dates. Open the file to add them to your calendar, with alerts 7 days before and on the day.'; } catch (e) { cm.textContent = 'The download didn’t go through in this browser.'; }
+      return;
+    }
+    var out = calCsv();
+    var fallback = function (why) { ta.value = out.text; ta.hidden = false; ta.focus(); ta.select(); cm.textContent = why + ' Copy the text below into a file named reminders.csv, then import that.'; };
+    if (!out.n) { cm.textContent = 'All of your dates have passed, so there is nothing to add.'; return; }
+    if (!dl) { fallback('Downloads aren’t available in this view.'); return; }
+    dl.save({ filename: 'navy-separation-reminders.csv', data: out.text }).then(function () { ta.hidden = true; cm.textContent = 'Saved ' + out.n + ' calendar entries. Now import the file into your calendar.'; },
+      function (e) { if (e && e.code === 'declined') cm.textContent = 'Download cancelled.'; else if (e && e.code === 'rate_limited') cm.textContent = 'A download prompt is already open. Try again in a moment.'; else fallback('The download didn’t go through.'); });
+  });
+
+  // ---------- form ----------
+  function fillForm(p) {
+    $('f-name').value = p.name || ''; $('f-base').value = p.base || ''; $('f-sep').value = p.sep || ''; $('f-out').value = p.out || ''; $('f-grade').value = p.grade; $('f-va').value = p.va; $('f-move').value = p.move; $('f-state').value = p.state || '';
+    ['married', 'sb', 'fed', 'clr', 'nuke'].forEach(function (k) { $('f-' + k).checked = !!p[k]; });
+  }
+  $('setup').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = $('f-err'), sep = parse($('f-sep').value), out = parse($('f-out').value), msg = '';
+    if (sep === null) msg = 'Enter your separation date to build the plan.';
+    else if (out !== null && out > sep) msg = 'Your last working day can’t be after your separation date. Change it or leave it blank.';
+    err.hidden = !msg; err.textContent = msg; if (msg) return;
+    st.profile = { name: $('f-name').value.trim(), base: $('f-base').value, sep: $('f-sep').value, out: out === null ? '' : $('f-out').value, grade: $('f-grade').value, va: $('f-va').value, move: $('f-move').value, state: $('f-state').value.trim(),
+      married: $('f-married').checked, sb: $('f-sb').checked, fed: $('f-fed').checked, clr: $('f-clr').checked, nuke: $('f-nuke').checked };
+    ui.editing = false; save(); render();
+    go('home');
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', function () { go(b.getAttribute('data-go')); }); });
+  $('open-check').addEventListener('click', function () { ui.tab = 'next'; go('checklist'); });
+  window.addEventListener('hashchange', function () { var h = location.hash.slice(1); if (VIEWS.indexOf(h) >= 0 && h !== ui.view) { ui.view = h; render(); } });
+  $('edit-btn').addEventListener('click', function () { fillForm(st.profile); ui.editing = true; render(); });
+  $('cancel-btn').addEventListener('click', function () { ui.editing = false; $('f-err').hidden = true; render(); });
+  $('hide-done').addEventListener('change', function (e) { ui.hide = e.target.checked; render(); });
+
+  // ---------- backup ----------
+  var msg = function (t) { $('backup-msg').textContent = t; };
+  function enc(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
+  function dec(s) { return JSON.parse(decodeURIComponent(escape(atob(s.trim())))); }
+  $('copy-btn').addEventListener('click', function () {
+    var code = enc(st), ta = $('backup-code'); ta.value = code;
+    var fallback = function () { ta.focus(); ta.select(); msg('Code selected below. Copy it.'); };
+    try { navigator.clipboard.writeText(code).then(function () { msg('Copied. Paste it into this page on your other device.'); }, fallback); } catch (e) { fallback(); }
+  });
+  $('restore-btn').addEventListener('click', function () {
+    try {
+      adopt(dec($('backup-code').value)); $('backup-code').value = ''; msg('Restored.'); render();
+    } catch (e) { msg('That code didn’t work. Paste the whole code, with nothing added.'); }
+  });
+  $('file-btn').addEventListener('click', function () {
+    var text = JSON.stringify(st, null, 1), name = 'navy-separation-planner-backup.json';
+    if (STANDALONE) {
+      try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg('Backup file saved. Keep it somewhere safe.'); } catch (e) { msg('The download didn’t go through. Use Copy backup code.'); }
+      return;
+    }
+    if (!dl) { msg('File downloads aren’t available in this view. Use Copy backup code.'); return; }
+    dl.save({ filename: name, data: text }).then(function () { msg('Backup file saved. Keep it somewhere safe.'); }, function (e) { msg(e && e.code === 'declined' ? 'Download cancelled.' : 'The download didn’t go through. Use Copy backup code.'); });
+  });
+  $('file-in').addEventListener('change', function (ev) {
+    var f = ev.target.files && ev.target.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { try { adopt(JSON.parse(String(rd.result))); msg('Restored from ' + f.name + '.'); render(); } catch (e) { msg('That file isn’t a planner backup.'); } ev.target.value = ''; };
+    rd.onerror = function () { msg('That file couldn’t be read.'); };
+    rd.readAsText(f);
+  });
+  var armed = false;
+  $('reset-btn').addEventListener('click', function () {
+    if (!armed) { armed = true; $('reset-btn').textContent = 'Erase everything? Tap again'; setTimeout(function () { armed = false; $('reset-btn').textContent = 'Start over'; }, 5000); return; }
+    armed = false; $('reset-btn').textContent = 'Start over';
+    st = { profile: null, done: {}, plans: {} }; try { localStorage.removeItem(KEY); } catch (e) {}
+    fillForm(exampleProfile()); $('f-sep').value = ''; $('f-base').value = ''; msg('Erased.'); render();
+  });
+
+  (function () { var sel = $('f-base'); sel.appendChild(new Option('Choose…', ''));
+    BASES.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).forEach(function (b) { sel.appendChild(new Option(b[1], b[0])); });
+    sel.appendChild(new Option('Other / not listed', 'other')); })();
+  load();
+  (function () { var h = ''; try { h = location.hash.slice(1); } catch (e) {} if (VIEWS.indexOf(h) >= 0) ui.view = h; })();
+  if (st.profile) fillForm(st.profile);
+  showSaved();
+  render();
+})();
+</script>
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script></body></html>
