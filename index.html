@@ -148,6 +148,14 @@ button { cursor: pointer; }
 .cal .actions { margin-top: 0; }
 .cal textarea { width: 100%; box-sizing: border-box; min-height: 6rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .72rem; }
 .tlr .t a { font-size: .76rem; color: var(--accent); }
+.wait { font-size: .82rem; color: var(--brass); margin-top: 6px; max-width: 70ch; }
+.bring { font-size: .84rem; margin-top: 8px; max-width: 70ch; }
+.bring b { font-weight: 600; }
+.bring ul { margin: 3px 0 0; padding-left: 1.1rem; color: var(--muted); }
+a.btn { display: inline-block; text-decoration: none; }
+.lc-out { margin-top: 12px; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--bg); border-radius: 6px; max-width: 65ch; }
+.lc-out b { font-family: var(--display); }
+.f input[type=number] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; box-sizing: border-box; min-width: 0; }
 .backup textarea { width: 100%; box-sizing: border-box; min-height: 3.2rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .76rem; margin-top: 10px; }
 .foot { font-size: .8rem; color: var(--muted); max-width: 75ch; }
 </style>
@@ -178,9 +186,10 @@ button { cursor: pointer; }
       <p class="small" style="margin-top:4px">Stays in this browser. Nothing you enter is sent anywhere or visible to anyone else.</p>
       <div class="fgrid">
         <div class="f"><label for="f-name">First name (optional)</label><input type="text" id="f-name" maxlength="40" autocomplete="off"></div>
-        <div class="f"><label for="f-sep">Separation date (EAOS)</label><input type="date" id="f-sep" required><span class="hint">Your last day of active duty.</span></div>
+        <div class="f"><label for="f-sep">Separation or retirement date</label><input type="date" id="f-sep" required><span class="hint">Your last day of active duty.</span></div>
+        <div class="f"><label for="f-how">How you’re leaving</label><select id="f-how"><option value="eaos" selected>End of enlistment or obligation (EAOS)</option><option value="ret">Retirement or Fleet Reserve</option><option value="inv">Involuntary separation</option><option value="med">Medical board (disability evaluation)</option></select></div>
         <div class="f"><label for="f-out">Last working day at your command</label><input type="date" id="f-out"><span class="hint">Earlier than EAOS if you'll take terminal leave or SkillBridge. Leave blank if unsure.</span></div>
-        <div class="f"><label for="f-base">Current command location</label><select id="f-base"></select><span class="hint">Used to show your local Fleet and Family office and claims help.</span></div>
+        <div class="f"><label for="f-base">Submarine base</label><select id="f-base"></select><span class="hint">Used to show your local Fleet and Family office and claims help.</span></div>
         <div class="f"><label for="f-grade">Paygrade</label><select id="f-grade"><option value="e5">E-1 to E-5</option><option value="e69" selected>E-6 to E-9</option><option value="off">Officer</option></select></div>
         <div class="f"><label for="f-va">VA disability claim</label><select id="f-va"><option value="yes" selected>I plan to file, or might</option><option value="no">I won't file</option></select></div>
         <div class="f"><label for="f-move">Final move</label><select id="f-move"><option value="und" selected>Not decided yet</option><option value="gov">Navy movers ship my things</option><option value="ppm">I'll move myself (PPM)</option><option value="both">Some of each</option><option value="none">Not moving</option></select></div>
@@ -199,6 +208,18 @@ button { cursor: pointer; }
         <button type="button" class="btn ghost" id="cancel-btn" hidden>Cancel</button>
       </div>
     </form>
+  </section>
+
+  <section class="card" id="leave-card" data-view="me">
+    <h2>Terminal leave calculator</h2>
+    <p class="small" style="margin-top:4px">Works out your last working day from your leave balance. It is an estimate: your CPPA confirms your real balance and dates.</p>
+    <div class="fgrid">
+      <div class="f"><label for="lc-bal">Leave balance today (days)</label><input type="number" id="lc-bal" min="0" max="120" step="0.5" inputmode="decimal"><span class="hint">From your latest LES.</span></div>
+      <div class="f"><label for="lc-sell">Days you’ll sell back</label><input type="number" id="lc-sell" min="0" max="60" step="0.5" inputmode="decimal" value="0"><span class="hint">Up to 60 over a whole career.</span></div>
+      <div class="f"><label for="lc-ptdy">PTDY days approved</label><input type="number" id="lc-ptdy" min="0" max="30" step="1" inputmode="numeric" value="0"><span class="hint" id="lc-ptdy-hint"></span></div>
+    </div>
+    <div class="lc-out" id="lc-out" role="status"></div>
+    <div class="actions"><button type="button" class="btn ghost" id="lc-use">Use as my last working day</button><span class="small" id="lc-msg" role="status"></span></div>
   </section>
 
   <section class="strip" id="strip" data-view="home"></section>
@@ -260,6 +281,12 @@ button { cursor: pointer; }
     <textarea id="backup-code" aria-label="Backup code" placeholder="Paste a backup code here, then choose Restore from code" spellcheck="false"></textarea>
   </section>
 
+  <section class="card" data-view="help">
+    <h2>Found a mistake?</h2>
+    <p class="small" style="margin-top:4px">Rules and phone numbers change. If something here is wrong or missing, report it so it gets fixed for the next sailor.</p>
+    <div class="actions"><a class="btn ghost" id="feedback-link" href="https://github.com/tnepalmer/navy-separation-planner/issues/new" target="_blank" rel="noopener">Report a problem</a><span class="small">Opens GitHub, which needs a free account.</span></div>
+  </section>
+
   <p class="foot" data-view="help">Rules were checked against official Navy, DoD and VA sources in October–November 2026 and are linked on each item. Policies change and commands differ, so treat dates as planning targets and confirm with your Command Career Counselor, CPPA and a VA-accredited service officer. Items marked “common practice” are widely recommended steps, not written rules. This page is not an official Navy product.</p>
 </div>
 
@@ -287,26 +314,23 @@ button { cursor: pointer; }
     irr: ['Navy Reserve IRR page', 'https://www.navyreserve.navy.mil/Resources/-IRR-Individual-Ready-Reserve/'],
     fsgli: ['Navy FSGLI page', 'https://www.mynavyhr.navy.mil/Support-Services/Casualty/FSGLI/'],
     eye: ['SECNAV 6810.1 (eyewear)', 'https://www.med.navy.mil/Portals/62/Documents/NMFA/NMLC/Nostra/6810.pdf'],
+    hhgret: ['NAVSUP retiree move guide', 'https://www.navsup.navy.mil/Portals/65/HHG/Documents/Retiring.pdf'],
+    tretire: ['TRICARE: retiring from active duty', 'https://tricare.mil/retiring'],
+    tamp: ['TRICARE transitional coverage (TAMP)', 'https://tricare.mil/TAMP'],
+    sbp: ['Military OneSource: Survivor Benefit Plan', 'https://www.militaryonesource.mil/family-relationships/gold-star-surviving-family/survivor-finances-and-legal/understanding-the-survivor-benefit-plan/'],
+    ides: ['Health.mil: Integrated Disability Evaluation System', 'https://health.mil/Military-Health-Topics/Access-Cost-Quality-and-Safety/DES/Integrated-Evaluation-System'],
     cp: ['Common practice', '']
   };
   var FL = { nm: 'Florida Dept. of Veterans’ Affairs service officers', ph: '727-319-7440', dt: 'Statewide claims help by phone or video; calls returned within 24 hours. Email FDVA.VSO@FDVA.FL.GOV. Your county veteran service office also files claims.', url: 'https://floridavets.org/' };
   var WA = { nm: 'Washington Dept. of Veterans Affairs claims help', ph: '800-562-2308', dt: 'Books you with a service officer in your county, in person or virtual. Email benefits@dva.wa.gov.', url: 'https://dva.wa.gov/resources/county-map' };
   var BASES = [
     ['norfolk', 'Naval Station Norfolk, VA', { nm: 'Fleet and Family Support Center Norfolk', ph: '757-444-2102', dt: '7928 14th Street, Suite 102, Norfolk, VA 23505 · Mon–Fri 8:00–4:30' }, { nm: 'Virginia Dept. of Veterans Services, Norfolk Benefits Office', ph: '757-455-0814', dt: '6350 Center Drive, Building 5, Suite 100, Norfolk, VA 23502 · veterans seen 8:30–3:00, walk-ins 8:30–11:00', url: 'https://www.dvs.virginia.gov/' }],
-    ['oceana', 'NAS Oceana / Dam Neck, VA', { nm: 'Fleet and Family Support Center Oceana', ph: '757-433-2912', dt: '1896 Laser Road, Suite 120, Bldg 531, Virginia Beach, VA 23460 · Mon–Thu 8:00–5:00, Fri 8:00–2:30' }, { nm: 'Virginia Dept. of Veterans Services, Virginia Beach (Oceana) office', ph: '757-689-3729', dt: '1232 Perimeter Parkway, Suite 202, Virginia Beach, VA 23454 · veterans seen 8:30–3:00', url: 'https://www.dvs.virginia.gov/' }],
-    ['sandiego', 'Naval Base San Diego, CA', { nm: 'Fleet and Family Support Center San Diego', ph: '866-923-6478', dt: '3005 Corbina Alley, Building 263, San Diego, CA 92136 · Mon–Fri 7:30–4:30' }, { nm: 'San Diego County Office of Military & Veterans Affairs', ph: '866-726-8831', dt: 'Prepares and submits VA claims. Offices at 5055 Ruffin Road, San Diego, and 401 Mile of Cars Way, National City · Mon–Fri 8–5', url: 'https://www.sandiegocounty.gov/content/sdc/hhsa/programs/ais/veterans_services/' }],
-    ['coronado', 'Naval Base Coronado / North Island, CA', { nm: 'Fleet and Family Support Center Coronado', ph: '619-545-6071', dt: 'Saufley Street, Bldg 318, San Diego, CA 92135 · Mon–Fri 7:30–4:30' }, { nm: 'San Diego County Office of Military & Veterans Affairs', ph: '866-726-8831', dt: 'Prepares and submits VA claims. Offices at 5055 Ruffin Road, San Diego, and 401 Mile of Cars Way, National City · Mon–Fri 8–5', url: 'https://www.sandiegocounty.gov/content/sdc/hhsa/programs/ais/veterans_services/' }],
-    ['lemoore', 'NAS Lemoore, CA', { nm: 'Fleet and Family Support Center Lemoore', ph: '559-998-4688', dt: '966 Franklin Avenue, NAS Lemoore, CA 93246 · Mon–Fri 8:00–4:30' }, { nm: 'Kings County Veterans Services Office', ph: '559-852-2669', dt: '1400 W. Lacey Blvd., Law Building #4, Hanford, CA 93230 · Mon–Thu 8–5, Fri 8–12', url: 'https://www.countyofkingsca.gov/departments/general-services/veterans-services' }],
-    ['jax', 'NAS Jacksonville, FL', { nm: 'Fleet and Family Support Center Jacksonville', ph: '904-542-5745', dt: '27 Ranger Street, Bldg 27, NAS Jacksonville, FL 32212 · Mon–Wed 7:30–4:00, Thu 10:00–4:00, Fri 7:30–3:00' }, FL],
-    ['mayport', 'Naval Station Mayport, FL', { nm: 'Fleet and Family Support Center Mayport', ph: '904-270-6600', dt: 'Bldg. 1, Massey Avenue, Jacksonville, FL 32228 · Mon–Thu 7:30–4:00, Fri 7:30–3:00' }, FL],
-    ['pensacola', 'NAS Pensacola, FL', { nm: 'Fleet and Family Support Center Pensacola', ph: '850-452-5990', dt: '151 Ellyson Avenue, Building 625, NAS Pensacola, FL 32508 · Mon–Fri 7:30–4:00' }, FL],
+    ['sandiego', 'Naval Base Point Loma / San Diego, CA', { nm: 'Fleet and Family Support Center San Diego', ph: '866-923-6478', dt: '3005 Corbina Alley, Building 263, San Diego, CA 92136 · Mon–Fri 7:30–4:30' }, { nm: 'San Diego County Office of Military & Veterans Affairs', ph: '866-726-8831', dt: 'Prepares and submits VA claims. Offices at 5055 Ruffin Road, San Diego, and 401 Mile of Cars Way, National City · Mon–Fri 8–5', url: 'https://www.sandiegocounty.gov/content/sdc/hhsa/programs/ais/veterans_services/' }],
     ['kingsbay', 'Naval Submarine Base Kings Bay, GA', { nm: 'Fleet and Family Support Center Kings Bay', ph: '912-573-4513', dt: '920 USS James Madison Road, Kings Bay, GA 31547 · Mon–Wed 7:30–4:00, Thu 8:30–4:00, Fri 7:30–3:30' }, { nm: 'Georgia Dept. of Veterans Service, Kings Bay field office', ph: '912-573-1856', dt: 'On base at 1063 USS Tennessee Ave, Kings Bay, GA 31547 · Mon–Fri 9:00–4:30', url: 'https://veterans.georgia.gov/' }],
     ['newlondon', 'Naval Submarine Base New London, CT', { nm: 'Fleet and Family Support Center New London', ph: '860-694-3383', dt: 'Building 83, Grayling Ave, Room 102, Groton, CT 06340 · Mon–Fri 7:30–4:00' }, { nm: 'Connecticut Dept. of Veterans Affairs, Norwich service office', ph: '860-887-9162', dt: 'City Hall, 100 Broadway, Room 305, Norwich, CT 06360. Files VA claims and represents you at no cost.', url: 'https://portal.ct.gov/DVA/advocacy-and-assistance' }],
-    ['greatlakes', 'Naval Station Great Lakes, IL', { nm: 'Fleet and Family Support Center Great Lakes', ph: '847-688-3603', dt: '525 Farragut Avenue, Suite 300, Building 26, Great Lakes, IL 60088 · Mon–Fri 7:30–4:00 · TAP questions: nsgltap@us.navy.mil' }, { nm: 'Illinois Dept. of Veterans Affairs service officers', ph: '', dt: 'Use the state’s county lookup to find the service officer for Lake County.', url: 'https://veterans.illinois.gov/serviceoffices/vso-locator-countylist.html' }],
     ['kitsap', 'Naval Base Kitsap (Bremerton / Bangor), WA', { nm: 'Fleet and Family Support Center Kitsap', ph: '360-627-2412', dt: '120 South Dewey Street, Building 491, Bremerton, WA 98314 · Mon–Thu 7:30–5:00, Fri 7:30–4:00' }, WA],
-    ['everett', 'Naval Station Everett, WA', { nm: 'Fleet and Family Support Center Everett', ph: '425-304-3735', dt: '2000 W Marine Drive, Bldg 2000, Room 156, Everett, WA 98207 · Mon–Wed, Fri 8:00–4:00, Thu 10:00–4:00' }, WA],
-    ['whidbey', 'NAS Whidbey Island, WA', { nm: 'Fleet and Family Support Center Whidbey Island', ph: '360-257-6923', dt: '3675 W Lexington Street, Building 2556, Oak Harbor, WA 98278 · Mon–Thu 7:30–5:00, Fri 7:30–4:00' }, WA],
-    ['pearl', 'Joint Base Pearl Harbor-Hickam, HI', { nm: 'Military and Family Support Center (Navy)', ph: '808-474-1999', dt: '4827 Bougainville Drive, 2nd Floor, Honolulu, HI 96818 · Mon–Fri 7:30–4:00' }, { nm: 'Hawaii Office of Veterans’ Services, Oʻahu office', ph: '808-433-0420', dt: 'Tripler Army Medical Center, 459 Patterson Road, E-Wing, Room 1-A103, Honolulu · Mon–Fri 7:45–4:30, walk-ins Mon and Wed 8–12', url: 'https://dod.hawaii.gov/ovs/' }]
+    ['pearl', 'Joint Base Pearl Harbor-Hickam, HI', { nm: 'Military and Family Support Center (Navy)', ph: '808-474-1999', dt: '4827 Bougainville Drive, 2nd Floor, Honolulu, HI 96818 · Mon–Fri 7:30–4:00' }, { nm: 'Hawaii Office of Veterans’ Services, Oʻahu office', ph: '808-433-0420', dt: 'Tripler Army Medical Center, 459 Patterson Road, E-Wing, Room 1-A103, Honolulu · Mon–Fri 7:45–4:30, walk-ins Mon and Wed 8–12', url: 'https://dod.hawaii.gov/ovs/' }],
+    ['guam', 'Naval Base Guam', { nm: 'Fleet and Family Support Center Guam', ph: '671-333-2056', dt: 'Naval Base Guam, Bldg. 106 · Mon–Fri 7:30–4:00 · TAP questions: NBGTAP@us.navy.mil' }, { nm: 'VA-accredited service officers on Guam', ph: '', dt: 'Use VA’s search to find an accredited representative near you.', url: 'https://www.va.gov/get-help-from-accredited-representative/find-rep/' }]
   ];
   var NATIONAL = [
     { nm: 'Find a VA-accredited representative', ph: '', dt: 'VA’s search for accredited service officers near any ZIP code.', url: 'https://www.va.gov/get-help-from-accredited-representative/find-rep/' },
@@ -322,33 +346,39 @@ button { cursor: pointer; }
   var ITEMS = [
     { id: 'tap-ic', ph: 'tap', t: 'confirm', base: 'sep', off: -365, title: 'Confirm Initial Counseling and pre-separation counseling are on your DD 2648', notes: 'Both are required 365 or more days before separation. If either is missing, see your Command Career Counselor now. Capstone can’t be signed off without them.', src: S.tap },
     { id: 'tap-core', ph: 'tap', t: 'task', base: 'sep', off: -120, lead: 245, title: 'Complete the TAP core curriculum', notes: 'Transition Day, the VA benefits briefing and the Department of Labor employment day, booked through Fleet and Family Support Center.', src: S.tap },
-    { id: 'capstone', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Complete Capstone at Fleet and Family Support Center', notes: 'Due no later than 90 days before separation. Bring your Individual Transition Plan, resume and DD 2648.', src: S.tap },
+    { id: 'capstone', after: ['tap-ic', 'tap-core'], bring: ['Individual Transition Plan', 'Resume', 'DD 2648'], ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Complete Capstone at Fleet and Family Support Center', notes: 'Due no later than 90 days before separation. Bring your Individual Transition Plan, resume and DD 2648.', src: S.tap },
     { id: 'str', ph: 'tap', t: 'task', base: 'sep', off: -150, lead: 60, title: 'Get a full copy of your service treatment records', notes: 'Ask medical records for your whole record, plus dental. Check that it has your MEPS entrance physical, periodic health assessments, hearing tests and any outside (network) care. Keep your own copy whether or not you file a VA claim.', src: S.bdd },
-    { id: 'vso', ph: 'tap', t: 'task', base: 'sep', off: -165, lead: 60, title: 'Book a free VA-accredited service officer', notes: 'DAV, VFW, American Legion and state veterans offices review your conditions list and file with you at no cost. Ask Fleet and Family who covers your base, and confirm the person is VA-accredited.', src: S.bdd, when: va },
-    { id: 'bdd', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'File your VA disability claim through BDD (VA Form 21-526EZ)', notes: 'Benefits Delivery at Discharge is open from 180 to 90 days before separation. File online at VA.gov with your treatment records and the Separation Health Assessment Part A. You must be available for VA exams for 45 days after filing, so file before terminal leave or travel.', late: 'The BDD window has closed for your date. You can still file a standard pre-discharge claim on VA.gov before you separate, or file after. It is decided more slowly but pays back to the day after separation if filed within a year.', src: S.bdd, when: va },
-    { id: 'shpe', ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Start your separation physical (DD 2807-1, then the exam)', notes: 'Required for everyone. If you’re filing a VA claim, schedule it no later than 90 days out. The VA’s exam can count as your separation physical if it is in your record 30 or more days before separation.', src: S.shpe },
+    { id: 'vso', how: ['eaos', 'ret', 'inv'], bring: ['Separation orders or authorization', 'Service treatment and dental records', 'Your list of conditions and symptoms', 'Marriage and birth certificates for dependents'], ph: 'tap', t: 'task', base: 'sep', off: -165, lead: 60, title: 'Book a free VA-accredited service officer', notes: 'DAV, VFW, American Legion and state veterans offices review your conditions list and file with you at no cost. Ask Fleet and Family who covers your base, and confirm the person is VA-accredited.', src: S.bdd, when: va },
+    { id: 'bdd', how: ['eaos', 'ret', 'inv'], after: ['str'], bring: ['Service treatment records', 'Separation Health Assessment Part A', 'Bank routing and account numbers', 'Marriage and birth certificates for dependents'], ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'File your VA disability claim through BDD (VA Form 21-526EZ)', notes: 'Benefits Delivery at Discharge is open from 180 to 90 days before separation. File online at VA.gov with your treatment records and the Separation Health Assessment Part A. You must be available for VA exams for 45 days after filing, so file before terminal leave or travel.', late: 'The BDD window has closed for your date. You can still file a standard pre-discharge claim on VA.gov before you separate, or file after. It is decided more slowly but pays back to the day after separation if filed within a year.', src: S.bdd, when: va },
+    { id: 'shpe', bring: ['Completed DD 2807-1', 'Your copy of your treatment records'], ph: 'tap', t: 'task', base: 'sep', off: -90, lead: 90, title: 'Start your separation physical (DD 2807-1, then the exam)', notes: 'Required for everyone. If you’re filing a VA claim, schedule it no later than 90 days out. The VA’s exam can count as your separation physical if it is in your record 30 or more days before separation.', src: S.shpe },
     { id: 'sb', ph: 'tap', t: 'decide', base: 'sep', off: 0, title: 'Decide on SkillBridge and apply', notes: '', src: S.sb, when: function (p) { return p.sb; } },
-    { id: 'leave', ph: 'tap', t: 'decide', base: 'out', off: -75, title: 'Decide: terminal leave or sell leave back', notes: 'You can sell back up to 60 days over a career. Terminal leave moves your last day at the command earlier, which pulls your paperwork, physical and VA exam dates forward with it. Update “last working day” above once you decide.', src: S.leave },
-    { id: 'ptdy', ph: 'tap', t: 'info', base: 'sep', off: 0, title: 'No job or house-hunting PTDY at a normal EAOS', notes: 'Transition PTDY is for involuntary separations and retirements. Plan regular or terminal leave for interviews and moving.', src: S.leave },
+    { id: 'leave', alt: { eaos: 'You can sell back up to 60 days over a career. Terminal leave moves your last day at the command earlier, which pulls your paperwork, physical and VA exam dates forward with it. The terminal leave calculator under My info works out your last working day.' }, ph: 'tap', t: 'decide', base: 'out', off: -75, title: 'Decide: terminal leave or sell leave back', notes: 'You can sell back up to 60 days over a career. Terminal leave moves your last day at the command earlier, which pulls your paperwork, physical and VA exam dates forward with it. Update “last working day” above once you decide.', src: S.leave },
+    { id: 'ptdy', how: ['eaos'], ph: 'tap', t: 'info', base: 'sep', off: 0, title: 'No job or house-hunting PTDY at a normal EAOS', notes: 'Transition PTDY is for involuntary separations and retirements. Plan regular or terminal leave for interviews and moving.', src: S.leave },
+    { id: 'ptdy-yes', ph: 'tap', t: 'task', base: 'out', off: -45, lead: 60, how: ['ret', 'inv', 'med'], title: 'Request house and job-hunting PTDY', notes: 'Transition PTDY is up to 20 days for retirement or Fleet Reserve and up to 10 days for involuntary separation (30 and 20 if you are overseas). Members discharged for medical reasons may also be eligible. It needs your CO’s approval by request chit and can’t be combined with liberty to stretch it.', src: S.cppa },
+    { id: 'med-ides', ph: 'tap', t: 'info', base: 'sep', off: -180, how: ['med'], title: 'Your PEBLO runs your disability evaluation', notes: 'In the Integrated Disability Evaluation System, your Physical Evaluation Board Liaison Officer guides you through every step. A VA Military Service Coordinator files your VA claim for you, and you get a proposed VA rating before you leave, so there is no separate BDD claim to file. Dates here are estimates until your board result and separation date are final.', src: S.ides },
     { id: 'cool', ph: 'tap', t: 'info', base: 'sep', off: -365, title: 'Navy COOL needs a year left on your contract', notes: 'You must have at least a year remaining when you apply for certification funding. After you’re out, the GI Bill can reimburse license and certification exam fees.', src: S.cool },
     { id: 'rad', ph: 'tap', t: 'task', base: 'out', off: -30, lead: 90, title: 'Request your radiation exposure history', notes: 'Ask RADCON or medical for a copy of your lifetime exposure record before you check out. Civilian nuclear employers often ask for it.', src: S.cp, when: function (p) { return p.nuke; } },
 
-    { id: 'pk-start', ph: 'package', t: 'task', base: 'out', off: -150, lead: 120, title: 'Start your separation package with your CPPA (NPPSC 1900/2 checklist)', notes: 'Navy guidance is to start 5 to 9 months before you leave the command. Bring your DD 2648 and Capstone status.', src: S.cppa },
-    { id: 'pk-auth', ph: 'package', t: 'task', base: 'out', off: -120, lead: 60, title: 'Get your separation authorization on file and confirm no PCS orders are open', notes: 'CPPAs won’t submit a package without the authorization letter or message. Open PCS orders conflict with separation processing.', src: S.cppa },
-    { id: 'pk-quest', ph: 'package', t: 'task', base: 'out', off: -90, lead: 45, title: 'Complete the NPPSC 1900/1 Separations Questionnaire', notes: 'Medical and dental endorse it first. Blocks 1–17 are needed to cut orders, and your answers flow straight onto your DD 214, so check them carefully. Keep medical records out of the package.', src: S.cppa },
-    { id: 'pk-leave', ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Request separation leave the way your CPPA directs', notes: 'Confirm your leave balance first and note it on the 1900/1. Guidance has differed on whether it goes through NSIPS e-leave or the TSC, so ask. Leave ends at 2359 on your last day of active duty.', src: S.cppa, when: function (p, c) { return c.out < c.sep; } },
-    { id: 'pk-tsc', ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Package actionable at the TSC', notes: 'It must be complete at least 60 days before you leave the command. A late package can leave your DD 214 marked “Signature Unattainable”.', src: S.cppa },
-    { id: 'dd214', ph: 'package', t: 'task', base: 'out', off: -15, lead: 30, title: 'Verify your DD 214 worksheet in NSIPS, then sign', notes: 'Check character of service, dates, awards, NECs and schools. Mark it accurate or send it back with corrections. Print and keep copies 1 and 4. You need Member-4 for unemployment, the VA and employers.', src: S.cppa },
+    { id: 'pk-start', how: ['eaos', 'inv', 'med'], bring: ['DD 2648', 'Capstone status', 'Separation authorization, if you have it'], ph: 'package', t: 'task', base: 'out', off: -150, lead: 120, title: 'Start your separation package with your CPPA (NPPSC 1900/2 checklist)', notes: 'Navy guidance is to start 5 to 9 months before you leave the command. Bring your DD 2648 and Capstone status.', src: S.cppa },
+    { id: 'pk-start-ret', ph: 'package', t: 'task', base: 'out', off: -270, lead: 120, how: ['ret'], title: 'Start your retirement package with your CPPA (NPPSC 1800/1 checklist)', notes: 'Navy guidance is to start 9 to 12 months before you leave the command.', src: S.cppa, bring: ['DD 2648', 'Capstone status', 'Approved retirement or Fleet Reserve request'] },
+    { id: 'pk-auth', alt: { ret: 'Your approved retirement or Fleet Reserve request must be on file, and your EAOS must reach your retirement date. If it doesn’t, you have to extend or reenlist first. Open PCS orders conflict with processing.' }, ph: 'package', t: 'task', base: 'out', off: -120, lead: 60, title: 'Get your separation authorization on file and confirm no PCS orders are open', notes: 'CPPAs won’t submit a package without the authorization letter or message. Open PCS orders conflict with separation processing.', src: S.cppa },
+    { id: 'pk-quest', how: ['eaos', 'inv', 'med'], after: ['pk-start', 'pk-auth'], ph: 'package', t: 'task', base: 'out', off: -90, lead: 45, title: 'Complete the NPPSC 1900/1 Separations Questionnaire', notes: 'Medical and dental endorse it first. Blocks 1–17 are needed to cut orders, and your answers flow straight onto your DD 214, so check them carefully. Keep medical records out of the package.', src: S.cppa },
+    { id: 'pk-leave', after: ['leave'], ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Request separation leave the way your CPPA directs', notes: 'Confirm your leave balance first and note it on the 1900/1. Guidance has differed on whether it goes through NSIPS e-leave or the TSC, so ask. Leave ends at 2359 on your last day of active duty.', src: S.cppa, when: function (p, c) { return c.out < c.sep; } },
+    { id: 'pk-tsc', after: ['pk-quest', 'pk-start-ret', 'pk-auth'], ph: 'package', t: 'task', base: 'out', off: -60, lead: 45, title: 'Package actionable at the TSC', notes: 'It must be complete at least 60 days before you leave the command. A late package can leave your DD 214 marked “Signature Unattainable”.', src: S.cppa },
+    { id: 'sbp', ph: 'package', t: 'decide', base: 'sep', off: -90, how: ['ret'], title: 'Decide on the Survivor Benefit Plan', notes: 'With an eligible spouse or child you are enrolled at the maximum level automatically unless you elect otherwise before you retire. Choosing less than full coverage needs your spouse’s notarized signature. It is hard to change afterward, so decide 60 to 90 days out.', src: S.sbp },
+    { id: 'ret-2656', ph: 'package', t: 'task', base: 'sep', off: -60, lead: 60, how: ['ret'], after: ['sbp'], title: 'Complete DD 2656 for retired pay', notes: 'It must reach DFAS 45 to 60 days before your retirement date, or your first retired paycheck can be late. It also records your Survivor Benefit Plan election.', src: S.cppa, bring: ['Bank routing and account numbers', 'Spouse’s notarized signature, if electing less than full SBP', 'Tax withholding choices'] },
+    { id: 'inv-isp', ph: 'package', t: 'task', base: 'out', off: -60, lead: 60, how: ['inv'], title: 'Ask your CPPA about involuntary separation pay', notes: 'You may qualify with at least 6 but fewer than 20 years of active service if you agree to 3 years in the Ready Reserve. Your CPPA prepares the NAVPERS 1070/613, and it isn’t paid until the reserve agreement is signed.', src: S.cppa },
+    { id: 'dd214', after: ['pk-tsc'], ph: 'package', t: 'task', base: 'out', off: -15, lead: 30, title: 'Verify your DD 214 worksheet in NSIPS, then sign', notes: 'Check character of service, dates, awards, NECs and schools. Mark it accurate or send it back with corrections. Print and keep copies 1 and 4. You need Member-4 for unemployment, the VA and employers.', src: S.cppa },
 
-    { id: 'mv-decide', ph: 'move', t: 'decide', base: 'out', off: -75, title: 'Decide where you’ll live and how you’ll move', notes: 'You can ship to your home of record or the place you entered active duty. Options are Navy-arranged movers, a move you do yourself (PPM), or a mix up to your weight allowance. A PPM pays no more than the government’s cost.', src: S.hhg, when: moving },
-    { id: 'mv-3155', ph: 'move', t: 'task', base: 'out', off: -60, lead: 45, title: 'Do transportation counseling and sign DD Form 3155', notes: 'Do this as soon as orders are out. The form sets out your 180-day shipping and storage limits.', src: S.d3155, when: moving },
+    { id: 'mv-decide', alt: { ret: 'As a retiree you can ship to a home of selection anywhere in the U.S. Travel and shipping must be finished within 3 years of retirement. You get 90 days of storage at destination, and government storage ends 1 year after retirement. Options are Navy-arranged movers, a move you do yourself (PPM), or a mix.', inv: 'With 8 or more years and separation pay you rate a home of selection. Otherwise you ship to your home of record or the place you entered active duty. Ask the transportation office which applies and how long you have.', med: 'Disability retirement rates a home of selection whatever your time in service. A separation with severance usually follows the home-of-record rules. Ask the transportation office which applies once your board result is final.' }, ph: 'move', t: 'decide', base: 'out', off: -75, title: 'Decide where you’ll live and how you’ll move', notes: 'You can ship to your home of record or the place you entered active duty. Options are Navy-arranged movers, a move you do yourself (PPM), or a mix up to your weight allowance. A PPM pays no more than the government’s cost.', src: S.hhg, when: moving },
+    { id: 'mv-3155', after: ['mv-decide', 'pk-auth'], bring: ['Separation or retirement orders', 'Your destination address', 'A rough list of what you’re shipping'], ph: 'move', t: 'task', base: 'out', off: -60, lead: 45, title: 'Do transportation counseling and sign DD Form 3155', notes: 'Do this as soon as orders are out. The form sets out your 180-day shipping and storage limits.', src: S.d3155, when: moving },
     { id: 'mv-fam', ph: 'move', t: 'task', base: 'out', off: -90, lead: 45, title: 'Make sure your dependents are on your separation orders', notes: 'It raises your weight allowance and covers their travel. Tell your CPPA and the transportation office before orders are cut.', src: S.cp, when: function (p) { return p.married && moving(p); } },
-    { id: 'mv-dps', ph: 'move', t: 'task', base: 'out', off: -45, lead: 30, title: 'Create your DPS account and submit your move application', notes: 'At dps.move.mil with your orders number, issue date and issuing authority. Book early because summer pack dates fill up. DPS is also where you track the shipment and file a damage claim.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
-    { id: 'mv-pack', ph: 'move', t: 'task', base: 'out', off: -10, lead: 30, title: 'Pre-move survey and pack-out', notes: 'The moving company confirms pack dates at the survey. If you haven’t heard from them within 14 days of pack-out, call your Personal Property Office at 855-444-6683.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
-    { id: 'mv-ppm', ph: 'move', t: 'task', base: 'sep', off: 180, lead: 200, title: 'For a PPM: keep weight tickets and receipts, then file the claim', notes: 'You need two certified weight tickets (empty and full) for each trip, truck and storage receipts, vehicle registration, DD 2278 from counseling, a signed DD 1351-2, NPPSC 7000-1 and your orders. Without a CAC, email hhgaudit.ppmclaims@us.navy.mil for a secure DoD SAFE upload link. Don’t email documents with personal information directly.', src: S.ppm, when: function (p) { return p.move === 'ppm' || p.move === 'both' || p.move === 'und'; } },
-    { id: 'mv-claim', ph: 'move', t: 'task', base: 'sep', off: 180, lead: 180, title: 'File your separation travel claim (DD 1351-2)', notes: 'Travel to your home of record must be finished within 180 days. Attach orders, the EFT form and receipts of $75 or more, and send it to MyNavy Career Center. A travel advance still has to be settled with a claim.', src: S.cppa },
-    { id: 'mv-ext', ph: 'move', t: 'info', base: 'sep', off: 180, title: 'Need longer to move? Ask for an extension before day 180', notes: 'Extensions are for school, medical treatment or events outside your control, not convenience. Send a signed letter, separation orders, DD 214 and supporting documents. Free storage also ends at 180 days.', src: S.ext, when: moving },
-    { id: 'mv-dmg', ph: 'move', t: 'task', base: 'sep', off: 185, lead: 185, title: 'Inspect your delivery and file any damage claim in DPS', notes: 'Note damage on the delivery paperwork at the door, then file promptly.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-dps', after: ['mv-3155'], bring: ['Orders number', 'Orders issue date', 'Issuing authority'], ph: 'move', t: 'task', base: 'out', off: -45, lead: 30, title: 'Create your DPS account and submit your move application', notes: 'At dps.move.mil with your orders number, issue date and issuing authority. Book early because summer pack dates fill up. DPS is also where you track the shipment and file a damage claim.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-pack', after: ['mv-dps'], ph: 'move', t: 'task', base: 'out', off: -10, lead: 30, title: 'Pre-move survey and pack-out', notes: 'The moving company confirms pack dates at the survey. If you haven’t heard from them within 14 days of pack-out, call your Personal Property Office at 855-444-6683.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-ppm', ph: 'move', t: 'task', base: 'mv', off: 0, lead: 200, title: 'For a PPM: keep weight tickets and receipts, then file the claim', notes: 'You need two certified weight tickets (empty and full) for each trip, truck and storage receipts, vehicle registration, DD 2278 from counseling, a signed DD 1351-2, NPPSC 7000-1 and your orders. Without a CAC, email hhgaudit.ppmclaims@us.navy.mil for a secure DoD SAFE upload link. Don’t email documents with personal information directly.', src: S.ppm, when: function (p) { return p.move === 'ppm' || p.move === 'both' || p.move === 'und'; } },
+    { id: 'mv-claim', alt: { ret: 'Travel to your home of selection must be finished within 3 years of retirement. Attach orders, the EFT form and receipts of $75 or more, and send it to MyNavy Career Center. A travel advance still has to be settled with a claim.' }, bring: ['Orders', 'EFT form', 'Receipts of $75 or more'], ph: 'move', t: 'task', base: 'mv', off: 0, lead: 180, title: 'File your separation travel claim (DD 1351-2)', notes: 'Travel to your home of record must be finished within 180 days. Attach orders, the EFT form and receipts of $75 or more, and send it to MyNavy Career Center. A travel advance still has to be settled with a claim.', src: S.cppa },
+    { id: 'mv-ext', alt: { ret: 'Retirees have 3 years, and extensions are for school, medical treatment or events outside your control, not convenience. Nothing is approved past 6 years. Government storage ends 1 year after retirement.' }, ph: 'move', t: 'info', base: 'mv', off: 0, title: 'Need longer to move? Ask for an extension before your time limit', notes: 'Extensions are for school, medical treatment or events outside your control, not convenience. Send a signed letter, separation orders, DD 214 and supporting documents. Free storage also ends at 180 days.', src: S.ext, when: moving },
+    { id: 'mv-dmg', after: ['mv-pack'], ph: 'move', t: 'task', base: 'mv', off: 5, lead: 185, title: 'Inspect your delivery and file any damage claim in DPS', notes: 'Note damage on the delivery paperwork at the door, then file promptly.', src: S.hhg, when: function (p) { return p.move === 'gov' || p.move === 'both' || p.move === 'und'; } },
 
     { id: 'resume', ph: 'career', t: 'task', base: 'sep', off: -150, lead: 120, title: 'Build a civilian resume and pull your JST and VMET', notes: 'Your Joint Services Transcript and Verification of Military Experience and Training (DD 2586) translate schools and jobs into civilian terms. Fleet and Family reviews resumes for free.', src: S.cp },
     { id: 'apply', ph: 'career', t: 'task', base: 'sep', off: -60, lead: 120, title: 'Apply for jobs, with a start date after you separate', notes: 'Many employers hire 2 to 4 months out. You can usually start work during terminal leave. If you’re going to school, apply for admission and GI Bill benefits on the same timeline.', src: S.cp },
@@ -359,23 +389,26 @@ button { cursor: pointer; }
 
     { id: 'eval', ph: 'forgot', t: 'task', base: 'out', off: -45, lead: 60, title: 'Make sure your final eval and any end-of-tour award are submitted', notes: 'Both need to reach your record before you go.', src: S.cp },
     { id: 'dental', ph: 'forgot', t: 'task', base: 'out', off: -15, lead: 120, title: 'Use dental, vision and pharmacy while they’re free', notes: 'Cleaning and any dental work, an eye exam, and prescription refills. Active duty can order one frame-of-choice pair of glasses a year plus standard-issue pairs.', src: S.eye },
-    { id: 'health', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Line up health coverage for the day after you separate', notes: 'A normal end-of-enlistment separation usually doesn’t qualify for the 180 days of transitional TRICARE (TAMP). Options are an employer plan, CHCBP, VA health care or a marketplace plan. Dental and vision end at separation too.', src: S.chcbp },
+    { id: 'health', how: ['eaos'], ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Line up health coverage for the day after you separate', notes: 'A normal end-of-enlistment separation usually doesn’t qualify for the 180 days of transitional TRICARE (TAMP). Options are an employer plan, CHCBP, VA health care or a marketplace plan. Dental and vision end at separation too.', src: S.chcbp },
+    { id: 'tamp', ph: 'forgot', t: 'task', base: 'sep', off: -30, lead: 60, how: ['inv', 'med'], title: 'Confirm your 180 days of transitional TRICARE (TAMP)', notes: 'Involuntary separations under honorable conditions usually get 180 days of TRICARE after separation. Check that TAMP shows in milConnect before you out-process, and ask the TRICARE office if it doesn’t. If you are medically retired, you enroll as a retiree within 90 days instead.', src: S.tamp },
     { id: 'fam', ph: 'forgot', t: 'task', base: 'sep', off: -30, lead: 90, title: 'Plan your family’s coverage and benefits', notes: 'Your dependents’ TRICARE ends when yours does, so the plan you choose has to cover them. Add them to your VA claim (it raises pay at a 30% rating or higher). If your spouse has FSGLI, it can be converted to their own policy within 120 days of separation.', src: S.fsgli, when: function (p) { return p.married; } },
     { id: 'addr', ph: 'forgot', t: 'task', base: 'out', off: -15, lead: 45, title: 'Update your mailing address in milConnect and myPay', notes: 'Your DD 214, final W-2 and VA letters go to the address on file. Set up a myPay login that doesn’t need a CAC.', src: S.cp },
     { id: 'gtc', ph: 'forgot', t: 'task', base: 'out', off: -30, lead: 45, title: 'Close your Government Travel Card and settle open travel vouchers', notes: 'Open balances follow you out.', src: S.cp },
     { id: 'legal', ph: 'forgot', t: 'task', base: 'out', off: -45, lead: 60, title: 'Visit base legal about your lease, will and power of attorney', notes: 'Ask whether separation orders let you end your lease early, and update documents while legal help is free.', src: S.cp },
     { id: 'checkout', ph: 'forgot', t: 'task', base: 'out', off: -3, lead: 30, title: 'Finish your command check-out sheet', notes: 'Turn in issued gear and dosimetry, clear base housing or barracks, and get your security debrief.', src: S.cp },
     { id: 'les', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 30, title: 'Check your final LES and last pay', notes: 'Look for leave sell-back, any debts such as advances or excess shipping weight, and the final pay date.', src: S.cp },
-    { id: 'reserve', ph: 'forgot', t: 'decide', base: 'out', off: -45, title: 'Decide whether to join the drilling Navy Reserve', notes: 'Optional. Talk to a Navy Reserve career transition counselor before you separate if you’re considering it.', src: S.cp },
-    { id: 'irr', ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Any remaining service obligation moves to the IRR', notes: 'If you haven’t finished your 8-year obligation, you’re in the Individual Ready Reserve after separation. Answer official mail, keep recall information current and complete the annual screening. Questions go to PERS-93 at 800-535-2699.', src: S.irr },
+    { id: 'reserve', how: ['eaos', 'inv'], ph: 'forgot', t: 'decide', base: 'out', off: -45, title: 'Decide whether to join the drilling Navy Reserve', notes: 'Optional. Talk to a Navy Reserve career transition counselor before you separate if you’re considering it.', src: S.cp },
+    { id: 'irr', how: ['eaos', 'inv'], ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Any remaining service obligation moves to the IRR', notes: 'If you haven’t finished your 8-year obligation, you’re in the Individual Ready Reserve after separation. Answer official mail, keep recall information current and complete the annual screening. Questions go to PERS-93 at 800-535-2699.', src: S.irr },
     { id: 'resid', ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Sort out your state residency', notes: 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check income tax, vehicle registration and driver’s license rules for the state you’ll live in.', src: S.cp },
     { id: 'binder', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Build a separation binder, paper and digital', notes: 'Orders, DD 214 Member-4, medical and dental records, qualifications, move paperwork, travel claim receipts and your VA claim.', src: S.cp },
 
-    { id: 'ucx', ph: 'after', t: 'task', base: 'sep', off: 7, lead: 7, title: 'File for unemployment (UCX) if you’re not working yet', notes: 'File with your state the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.', src: S.ucx },
-    { id: 'rating', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Watch for your VA rating decision', notes: 'BDD claims are usually decided soon after discharge. You have a year to ask for a review if you disagree.', src: S.bdd, when: va },
+    { id: 'ucx', alt: { ret: 'If you’re not working, file with your state using your DD 214 Member-4. Retired pay can reduce the benefit, and the rules follow the state you file in.' }, ph: 'after', t: 'task', base: 'sep', off: 7, lead: 7, title: 'File for unemployment (UCX) if you’re not working yet', notes: 'File with your state the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.', src: S.ucx },
+    { id: 'rating', after: ['bdd'], ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Watch for your VA rating decision', notes: 'BDD claims are usually decided soon after discharge. You have a year to ask for a review if you disagree.', src: S.bdd, when: va },
     { id: 'vahc', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Apply for VA health care and a Veteran ID card', notes: 'Once you have your DD 214. Also look up your state’s veteran benefits, which vary widely.', src: S.cp },
     { id: 'record214', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Record your DD 214 with your town or county clerk', notes: 'Many clerks record it free as a confidential record, so you can get certified copies later. In some states it is how you claim a veterans’ property tax exemption.', src: S.cp },
-    { id: 'chcbp', ph: 'after', t: 'task', base: 'sep', off: 60, lead: 60, title: 'Enroll in CHCBP if you have no other health plan', notes: 'You have 60 days from losing TRICARE. It is premium-based, covers the same as TRICARE Select, and lasts 18 to 36 months.', src: S.chcbp },
+    { id: 'chcbp', how: ['eaos'], ph: 'after', t: 'task', base: 'sep', off: 60, lead: 60, title: 'Enroll in CHCBP if you have no other health plan', notes: 'You have 60 days from losing TRICARE. It is premium-based, covers the same as TRICARE Select, and lasts 18 to 36 months.', src: S.chcbp },
+    { id: 'chcbp-tamp', ph: 'after', t: 'task', base: 'sep', off: 240, lead: 60, how: ['inv', 'med'], title: 'Enroll in CHCBP when TAMP ends, if you have no other plan', notes: 'You have 60 days after your 180 days of transitional TRICARE end.', src: S.chcbp },
+    { id: 'ret-tricare', ph: 'after', t: 'task', base: 'sep', off: 90, lead: 90, how: ['ret'], title: 'Enroll in a TRICARE retiree plan', notes: 'You have 90 days after your retirement date to enroll in TRICARE Prime or Select, or you lose coverage. Expect higher costs as a retiree. Dental and vision are bought separately through FEDVIP.', src: S.tretire },
     { id: 'gibill', ph: 'after', t: 'decide', base: 'sep', off: 90, title: 'Decide how to use your GI Bill', notes: 'It covers degrees, some training programs and certification exam fees. Check your remaining entitlement at VA.gov.', src: S.cp },
     { id: 'tsp', ph: 'after', t: 'decide', base: 'sep', off: 90, title: 'Decide what to do with your TSP', notes: 'It can stay where it is, or roll into a new employer plan or IRA. There is no deadline, but contributions and matching stop at separation.', src: S.cp },
     { id: 'sgli', ph: 'after', t: 'info', base: 'sep', off: 120, title: 'Free SGLI coverage ends', notes: 'SGLI continues at no cost for 120 days after separation.', src: S.vgli },
@@ -387,7 +420,7 @@ button { cursor: pointer; }
   var st = { profile: null, done: {}, plans: {} }, ui = { tab: 'next', hide: false, editing: false, view: 'home' };
   var VIEWS = ['home', 'checklist', 'dates', 'help', 'me'];
   function go(v) { if (VIEWS.indexOf(v) < 0) v = 'home'; ui.view = v; try { if (location.hash !== '#' + v) location.hash = v; } catch (e) {} render(); try { window.scrollTo(0, 0); } catch (e) {} }
-  function load() { try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && typeof r === 'object') st = { profile: r.profile || null, done: r.done || {}, plans: r.plans || {}, savedAt: r.savedAt || '' }; } catch (e) {} }
+  function load() { try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && typeof r === 'object') st = { profile: r.profile || null, done: r.done || {}, plans: r.plans || {}, savedAt: r.savedAt || '', leave: r.leave || null }; } catch (e) {} }
   var saveOk = true;
   var askedPersist = false;
   function save() {
@@ -403,7 +436,7 @@ button { cursor: pointer; }
   }
   function adopt(o) {
     if (!o || typeof o !== 'object' || (o.profile && parse(o.profile.sep) === null)) throw 0;
-    st = { profile: o.profile || null, done: o.done || {}, plans: o.plans || {} }; save(); ui.editing = false;
+    st = { profile: o.profile || null, done: o.done || {}, plans: o.plans || {}, leave: o.leave || null }; save(); ui.editing = false; lcFilled = false;
     if (st.profile) fillForm(st.profile);
   }
 
@@ -415,17 +448,19 @@ button { cursor: pointer; }
   function addYears(ms, y) { var d = new Date(ms); return Date.UTC(d.getUTCFullYear() + y, d.getUTCMonth(), d.getUTCDate()); }
   function rel(ms) { var d = Math.round((ms - today()) / DAY); if (d === 0) return 'today'; var n = Math.abs(d).toLocaleString('en-US') + ' day' + (Math.abs(d) === 1 ? '' : 's'); return d > 0 ? 'in ' + n : n + ' ago'; }
 
-  function exampleProfile() { return { name: '', base: 'norfolk', sep: iso(today() + 200 * DAY), out: '', grade: 'e69', va: 'yes', move: 'gov', state: '', married: false, sb: true, fed: true, clr: true, nuke: false }; }
-  function ctx(p) { var sep = parse(p.sep), out = parse(p.out); if (out === null || out > sep) out = sep; return { sep: sep, out: out, tier: p.grade === 'e5' ? 180 : 120 }; }
+  function exampleProfile() { return { name: '', base: 'norfolk', how: 'eaos', sep: iso(today() + 200 * DAY), out: '', grade: 'e69', va: 'yes', move: 'gov', state: '', married: false, sb: true, fed: true, clr: true, nuke: false }; }
+  function ctx(p) { var sep = parse(p.sep), out = parse(p.out); if (out === null || out > sep) out = sep; var how = p.how || 'eaos'; return { sep: sep, out: out, tier: p.grade === 'e5' ? 180 : 120, how: how, mv: how === 'ret' ? addYears(sep, 3) : sep + 180 * DAY }; }
   function due(it, p, c) {
     if (it.id === 'sb') return c.sep - (c.tier + 21) * DAY;
     if (it.base === 'clr') return addYears(c.sep, 2);
+    if (it.base === 'mv') return c.mv + it.off * DAY;
     return (it.base === 'out' ? c.out : c.sep) + it.off * DAY;
   }
   function notes(it, p, c, d) {
     if (it.id === 'sb') return 'The Navy caps SkillBridge plus any terminal leave after it at ' + c.tier + ' days before separation for your paygrade' + (p.grade === 'e5' ? ' (confirm the E-5-and-below figure with your CCC)' : '') + ', so your earliest start is ' + fmt(c.sep - c.tier * DAY) + '. The application window opens 365 days out, and it must be submitted at least 3 weeks before your start date. Command approval is not guaranteed.';
     if (it.id === 'ucx' && p.state) return 'File with ' + p.state + ' the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.';
     if (it.id === 'resid' && p.state) return 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check ' + p.state + '’s income tax, vehicle registration and driver’s license rules.';
+    if (it.alt && it.alt[c.how]) return it.alt[c.how];
     if (it.late && d < today()) return it.late;
     return it.notes;
   }
@@ -446,20 +481,26 @@ button { cursor: pointer; }
     return s === 'Decide' && d - today() <= 90 * DAY;
   }
   function milestones(p, c) {
+    var ret = c.how === 'ret', tampOk = c.how === 'inv' || c.how === 'med', vb = va(p) && c.how !== 'med';
     var m = [
       [c.sep - 365 * DAY, 'TAP counseling due (365 days)', 'dl'],
-      [c.sep - 180 * DAY, 'VA claim (BDD) window opens (180 days)', '', va(p)],
+      [c.sep - 180 * DAY, 'VA claim (BDD) window opens (180 days)', '', vb],
       [c.sep - c.tier * DAY, 'Earliest SkillBridge start (' + c.tier + ' days)', '', p.sb],
       [c.sep - 120 * DAY, 'Federal jobs: veterans’ preference by statement of service (120 days)', '', p.fed],
-      [c.sep - 90 * DAY, va(p) ? 'BDD window closes · Capstone due (90 days)' : 'Capstone due (90 days)', 'dl'],
-      [c.out - 150 * DAY, 'Start separation package (5 months before leaving)', 'dl'],
+      [c.sep - 90 * DAY, vb ? 'BDD window closes · Capstone due (90 days)' : 'Capstone due (90 days)', 'dl'],
+      [c.out - 150 * DAY, 'Start separation package (5 months before leaving)', 'dl', !ret],
+      [c.out - 270 * DAY, 'Start retirement package (9 months before leaving)', 'dl', ret],
+      [c.sep - 60 * DAY, 'DD 2656 due at DFAS (60 days)', 'dl', ret],
       [c.out - 60 * DAY, 'Package actionable at the TSC (60 days before leaving)', 'dl'],
-      [c.sep - 30 * DAY, 'VA exam in your record to count as separation physical (30 days)', 'dl', va(p)],
+      [c.sep - 30 * DAY, 'VA exam in your record to count as separation physical (30 days)', 'dl', vb],
       [c.out, 'Last working day at your command', '', c.out < c.sep],
-      [c.sep, 'Separation (EAOS)', 'sep'],
-      [c.sep + 60 * DAY, 'CHCBP enrollment deadline (60 days)', 'dl'],
+      [c.sep, ret ? 'Retirement date' : c.how === 'eaos' ? 'Separation (EAOS)' : 'Separation date', 'sep'],
+      [c.sep + 60 * DAY, 'CHCBP enrollment deadline (60 days)', 'dl', c.how === 'eaos'],
+      [c.sep + 90 * DAY, 'TRICARE retiree enrollment deadline (90 days)', 'dl', ret],
+      [c.sep + 180 * DAY, 'Transitional TRICARE (TAMP) ends (180 days)', '', tampOk],
+      [c.sep + 240 * DAY, 'CHCBP deadline after TAMP ends', 'dl', tampOk],
       [c.sep + 120 * DAY, 'Free SGLI coverage ends (120 days)', ''],
-      [c.sep + 180 * DAY, 'Last day to ship household goods and travel on orders (180 days)', 'dl'],
+      [c.mv, ret ? 'Last day to ship household goods and travel (3 years)' : 'Last day to ship household goods and travel on orders (180 days)', 'dl'],
       [c.sep + 240 * DAY, 'VGLI without health questions closes (240 days)', 'dl'],
       [addYears(c.sep, 1) + 120 * DAY, 'Final VGLI deadline (1 year 120 days)', ''],
       [addYears(c.sep, 2), 'Clearance reinstatement window closes (about 24 months)', '', p.clr]
@@ -473,11 +514,14 @@ button { cursor: pointer; }
 
   function render() {
     var real = !!st.profile, p = st.profile || exampleProfile(), c = ctx(p), t = today();
-    var list = ITEMS.filter(function (it) { return !it.when || it.when(p, c); }).map(function (it) { return { it: it, d: due(it, p, c) }; });
+    var list = ITEMS.filter(function (it) { return (!it.when || it.when(p, c)) && (!it.how || it.how.indexOf(c.how) >= 0); }).map(function (it) { return { it: it, d: due(it, p, c) }; });
 
     // views
     Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (n) { n.hidden = n.getAttribute('data-view') !== ui.view; });
     Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function (b) { if (b.getAttribute('data-go') === ui.view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+
+    var byId = {}; list.forEach(function (r) { byId[r.it.id] = r; });
+    leaveCalc();
 
     // setup card
     if (real) { $('example-banner').hidden = true; $('intro').hidden = true; }
@@ -490,6 +534,7 @@ button { cursor: pointer; }
       var cb0 = BASES.filter(function (b) { return b[0] === p.base; })[0]; if (cb0) chips.push(cb0[1]);
       chips.push({ e5: 'E-1 to E-5', e69: 'E-6 to E-9', off: 'Officer' }[p.grade]);
       if (c.out < c.sep) chips.push('Last day at command ' + fmt(c.out));
+      if (p.how && p.how !== 'eaos') chips.push({ ret: 'Retiring', inv: 'Involuntary separation', med: 'Medical board' }[p.how]);
       chips.push(va(p) ? 'Filing VA claim' : 'No VA claim');
       chips.push({ und: 'Move undecided', gov: 'Navy movers', ppm: 'Moving myself', both: 'Movers + PPM', none: 'Not moving' }[p.move]);
       if (p.married) chips.push('Dependents'); if (p.sb) chips.push('SkillBridge'); if (p.fed) chips.push('Federal jobs'); if (p.clr) chips.push('Clearance'); if (p.nuke) chips.push('Nuclear'); if (p.state) chips.push(p.state);
@@ -541,7 +586,7 @@ button { cursor: pointer; }
     var strip = $('strip'); strip.replaceChildren();
     function stat(k, v, s, cls, txt) { var d = el('div', 'card stat' + (cls ? ' ' + cls : '')); d.appendChild(el('div', 'k', k)); d.appendChild(el('div', 'v' + (txt ? ' txt' : ''), v)); d.appendChild(el('div', 's', s)); strip.appendChild(d); }
     var left = Math.round((c.sep - t) / DAY);
-    stat(left >= 0 ? 'Days until separation' : 'Days since separation', Math.abs(left).toLocaleString('en-US'), 'EAOS ' + fmt(c.sep));
+    stat(left >= 0 ? 'Days until separation' : 'Days since separation', Math.abs(left).toLocaleString('en-US'), (c.how === 'ret' ? 'Retiring ' : c.how === 'eaos' ? 'EAOS ' : 'Separating ') + fmt(c.sep));
     var nextDl = milestones(p, c).filter(function (m) { return (m[2] === 'dl' || m[2] === 'sep') && m[0] >= t; })[0];
     if (nextDl) stat('Next hard deadline', nextDl[1], fmt(nextDl[0]) + ' · ' + rel(nextDl[0]), 'hot', true);
     var nextN = list.filter(function (r) { return isNext(r.it, r.d, c); }).length;
@@ -601,6 +646,9 @@ button { cursor: pointer; }
       if (it.src[1]) { var a = el('a', '', it.src[0]); a.href = it.src[1]; a.target = '_blank'; a.rel = 'noopener'; meta.appendChild(a); } else meta.appendChild(document.createTextNode(it.src[0]));
       body.appendChild(meta);
       body.appendChild(el('p', 'notes', notes(it, p, c, r.d)));
+      var waitOn = done ? [] : (it.after || []).filter(function (id) { return byId[id] && !st.done[id]; });
+      if (waitOn.length) body.appendChild(el('p', 'wait', 'Do first: ' + waitOn.map(function (id) { return byId[id].it.title; }).join('; ')));
+      if (it.bring) { var bw = el('div', 'bring'); bw.appendChild(el('b', '', 'Have ready')); var bu = el('ul'); it.bring.forEach(function (x) { bu.appendChild(el('li', '', x)); }); bw.appendChild(bu); body.appendChild(bw); }
       if (hasPlan(it.id) || ui.open === it.id) {
         var pw = el('div', 'plan'), pl = el('label', '', 'My plan'), ta = el('textarea');
         ta.id = 'p-' + it.id; pl.htmlFor = ta.id; ta.maxLength = 4000; ta.value = st.plans[it.id] || '';
@@ -663,9 +711,38 @@ button { cursor: pointer; }
       function (e) { if (e && e.code === 'declined') cm.textContent = 'Download cancelled.'; else if (e && e.code === 'rate_limited') cm.textContent = 'A download prompt is already open. Try again in a moment.'; else fallback('The download didn’t go through.'); });
   });
 
+  // ---------- terminal leave ----------
+  var lcFilled = false, lcLast = null;
+  function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+  function leaveCalc() {
+    var p = st.profile, out = $('lc-out'), use = $('lc-use');
+    if (!lcFilled && st.leave) { lcFilled = true; $('lc-bal').value = st.leave.bal; $('lc-sell').value = st.leave.sell; $('lc-ptdy').value = st.leave.ptdy; }
+    var how = p ? (p.how || 'eaos') : 'eaos';
+    $('lc-ptdy-hint').textContent = how === 'eaos' ? 'Leave at 0. A normal EAOS doesn’t rate transition PTDY.' : how === 'ret' ? 'Up to 20 in the U.S. for retirement, if your CO approves.' : 'Up to 10 in the U.S., if your CO approves.';
+    lcLast = null; use.disabled = true;
+    if (!p) { out.textContent = 'Enter your info above first, so the calculator knows your date.'; return; }
+    var bal = num('lc-bal'); if (bal === null || bal < 0) { out.textContent = 'Enter your leave balance to see your last working day.'; return; }
+    var c = ctx(p), t = today(), sell = Math.min(60, Math.max(0, num('lc-sell') || 0)), ptdy = Math.min(30, Math.max(0, Math.round(num('lc-ptdy') || 0)));
+    var earn = Math.floor(Math.max(0, (c.sep - t) / DAY / 30.4375) * 2.5 * 2) / 2, total = bal + earn;
+    if (sell > total) sell = total;
+    var term = Math.ceil(total - sell), last = c.sep - (term + ptdy) * DAY;
+    out.replaceChildren();
+    out.appendChild(document.createTextNode('You earn about ' + earn + ' more days by ' + fmt(c.sep) + ', for ' + total + ' in all. '
+      + (sell ? 'Selling ' + sell + ' leaves ' : 'That is ') + term + ' day' + (term === 1 ? '' : 's') + ' of terminal leave' + (ptdy ? ', plus ' + ptdy + ' of PTDY' : '') + '. Last working day: '));
+    out.appendChild(el('b', '', fmt(last)));
+    out.appendChild(document.createTextNode(last < t ? '. That date has already passed, so sell more days or take less leave.' : ' (' + rel(last) + ').'));
+    if (last >= t) { lcLast = last; use.disabled = false; }
+  }
+  ['lc-bal', 'lc-sell', 'lc-ptdy'].forEach(function (id) { $(id).addEventListener('input', function () {
+    lcFilled = true; var b = num('lc-bal'); st.leave = b === null ? null : { bal: b, sell: num('lc-sell') || 0, ptdy: num('lc-ptdy') || 0 }; if (st.profile) save(); $('lc-msg').textContent = ''; leaveCalc(); }); });
+  $('lc-use').addEventListener('click', function () {
+    if (lcLast === null || !st.profile) return;
+    st.profile.out = iso(lcLast); save(); fillForm(st.profile); render(); $('lc-msg').textContent = 'Done. Your paperwork and move dates now count back from ' + fmt(lcLast) + '.';
+  });
+
   // ---------- form ----------
   function fillForm(p) {
-    $('f-name').value = p.name || ''; $('f-base').value = p.base || ''; $('f-sep').value = p.sep || ''; $('f-out').value = p.out || ''; $('f-grade').value = p.grade; $('f-va').value = p.va; $('f-move').value = p.move; $('f-state').value = p.state || '';
+    $('f-name').value = p.name || ''; $('f-base').value = p.base || ''; $('f-how').value = p.how || 'eaos'; $('f-sep').value = p.sep || ''; $('f-out').value = p.out || ''; $('f-grade').value = p.grade; $('f-va').value = p.va; $('f-move').value = p.move; $('f-state').value = p.state || '';
     ['married', 'sb', 'fed', 'clr', 'nuke'].forEach(function (k) { $('f-' + k).checked = !!p[k]; });
   }
   $('setup').addEventListener('submit', function (e) {
@@ -674,7 +751,7 @@ button { cursor: pointer; }
     if (sep === null) msg = 'Enter your separation date to build the plan.';
     else if (out !== null && out > sep) msg = 'Your last working day can’t be after your separation date. Change it or leave it blank.';
     err.hidden = !msg; err.textContent = msg; if (msg) return;
-    st.profile = { name: $('f-name').value.trim(), base: $('f-base').value, sep: $('f-sep').value, out: out === null ? '' : $('f-out').value, grade: $('f-grade').value, va: $('f-va').value, move: $('f-move').value, state: $('f-state').value.trim(),
+    st.profile = { name: $('f-name').value.trim(), base: $('f-base').value, how: $('f-how').value, sep: $('f-sep').value, out: out === null ? '' : $('f-out').value, grade: $('f-grade').value, va: $('f-va').value, move: $('f-move').value, state: $('f-state').value.trim(),
       married: $('f-married').checked, sb: $('f-sb').checked, fed: $('f-fed').checked, clr: $('f-clr').checked, nuke: $('f-nuke').checked };
     ui.editing = false; save(); render();
     go('home');
