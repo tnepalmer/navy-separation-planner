@@ -99,6 +99,7 @@ def navadmin_url(year, num, ext):
 
 def navadmin_index_numbers(year):
     status, body, _ = fetch(f'{NAVADMIN_BASE}/References/Messages/NAVADMIN-{year}/')
+    print(f'  NAVADMIN index {year}: {status if status else "ERR " + body[:80].decode("utf-8", "replace")}')
     if status != 200:
         return []
     yy = f'{year % 100:02d}'
@@ -190,6 +191,7 @@ def check_pages(state, urls, today):
     changed, broken, notes = [], [], []
     for url in urls:
         status, body, ctype = fetch(url)
+        print(f'  {status if status else "ERR"}  {url}' + ('' if status else f'  ({body[:80].decode("utf-8", "replace")})'))
         rec = pages.get(url)
         if status != 200 or not body:
             fails = (rec or {}).get('fails', 0) + 1
