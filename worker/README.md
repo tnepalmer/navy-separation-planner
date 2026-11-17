@@ -26,7 +26,7 @@ notifications off, when the phone's push address stops working, or after
 3. Set **Root directory** to `worker`. Leave the build command empty. The deploy
    command is `npx wrangler deploy`.
 4. Deploy. Cloudflare shows the Worker's address, for example
-   `https://navy-separation-reminders.<your-subdomain>.workers.dev`.
+   `https://navy-separation-planner.<your-subdomain>.workers.dev`.
 5. Put that address in `REMINDER_API` near the top of the script in `index.html`, and
    push. The bells and the "Phone notifications" card appear once it's set.
 
