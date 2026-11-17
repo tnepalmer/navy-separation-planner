@@ -75,6 +75,22 @@ button { cursor: pointer; }
   .nav button { flex: 1 1 0; min-width: 0; border: 0; border-radius: 8px; padding: 9px 2px; font-size: .74rem; white-space: nowrap; }
   .nav .nct { margin-left: 3px; font-size: .68rem; }
 }
+.hello { display: flex; flex-direction: column; gap: 6px; }
+.hello h2 { font-size: clamp(1.35rem, 3.6vw, 1.7rem); text-wrap: balance; }
+.hello .who { color: var(--muted); max-width: 70ch; }
+.hello .prog { flex: none; margin-top: 6px; max-width: 26rem; }
+.decide { list-style: none; margin: 10px 0 0; padding: 0; }
+.decide li { padding: 10px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
+.decide .tt { font-weight: 600; }
+.decide .pl { font-size: .86rem; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; border-left: 3px solid var(--ok); padding-left: 9px; max-width: 70ch; }
+.decide .nd { font-size: .82rem; color: var(--brass); }
+.decide button { align-self: flex-start; }
+body.onboard .nav { display: none !important; }
+body.onboard { padding-bottom: 48px; }
+.welcome .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 10px 18px; margin-top: 12px; }
+.welcome .steps div { font-size: .86rem; color: var(--muted); }
+.welcome .steps b { display: block; color: var(--ink); font-family: var(--display); font-weight: 600; font-size: .95rem; }
+.req { color: var(--bad); }
 .upnext { list-style: none; margin: 10px 0 0; padding: 0; }
 .upnext li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); }
 .upnext .tt { font-weight: 600; flex: 1 1 16rem; min-width: 0; }
@@ -163,7 +179,7 @@ a.btn { display: inline-block; text-decoration: none; }
 <div class="wrap">
   <header>
     <h1>Navy Separation Planner</h1>
-    <p class="sub" id="intro" data-view="home">Enter your separation date and a few details. Every deadline, form and commonly missed step is then dated for you, from TAP and your VA claim through your move and the months after you're out.</p>
+    <p class="sub" id="intro" hidden>A personal checklist and deadline timeline for leaving the Navy, from TAP and your VA claim through your move and the months after you’re out.</p>
   </header>
 
   <nav class="nav" id="nav" aria-label="Sections">
@@ -174,7 +190,15 @@ a.btn { display: inline-block; text-decoration: none; }
     <button type="button" data-go="me">My info</button>
   </nav>
 
-  <div class="banner" id="example-banner" data-view="home" hidden><b>This is an example.</b> <span id="example-text"></span> <button type="button" class="linkbtn" data-go="me">Enter your info</button> to make it yours.</div>
+  <section class="card welcome" id="welcome" hidden>
+    <h2>Let’s build your plan</h2>
+    <p class="sub">Answer a few questions about how and when you’re leaving. It takes about two minutes, and every deadline and form is then dated for you.</p>
+    <div class="steps">
+      <div><b>1. Tell it about you</b>Your date, base and situation.</div>
+      <div><b>2. Get your checklist</b>Only the items that apply to you, in order.</div>
+      <div><b>3. Keep it current</b>Tick things off. It saves on this device.</div>
+    </div>
+  </section>
 
   <section class="card" id="setup-card" data-view="me">
     <div id="summary" class="summary" hidden>
@@ -182,11 +206,11 @@ a.btn { display: inline-block; text-decoration: none; }
       <button type="button" class="btn ghost" id="edit-btn">Edit my info</button>
     </div>
     <form id="setup" novalidate>
-      <h2>Your info</h2>
+      <h2 id="setup-title">Your info</h2>
       <p class="small" style="margin-top:4px">Stays in this browser. Nothing you enter is sent anywhere or visible to anyone else.</p>
       <div class="fgrid">
         <div class="f"><label for="f-name">First name (optional)</label><input type="text" id="f-name" maxlength="40" autocomplete="off"></div>
-        <div class="f"><label for="f-sep">Separation or retirement date</label><input type="date" id="f-sep" required><span class="hint">Your last day of active duty.</span></div>
+        <div class="f"><label for="f-sep">Separation or retirement date <span class="req" aria-hidden="true">*</span></label><input type="date" id="f-sep" required><span class="hint">Your last day of active duty.</span></div>
         <div class="f"><label for="f-how">How you’re leaving</label><select id="f-how"><option value="eaos" selected>End of enlistment or obligation (EAOS)</option><option value="ret">Retirement or Fleet Reserve</option><option value="inv">Involuntary separation</option><option value="med">Medical board (disability evaluation)</option></select></div>
         <div class="f"><label for="f-out">Last working day at your command</label><input type="date" id="f-out"><span class="hint">Earlier than EAOS if you'll take terminal leave or SkillBridge. Leave blank if unsure.</span></div>
         <div class="f"><label for="f-base">Submarine base</label><select id="f-base"></select><span class="hint">Used to show your local Fleet and Family office and claims help.</span></div>
@@ -222,12 +246,24 @@ a.btn { display: inline-block; text-decoration: none; }
     <div class="actions"><button type="button" class="btn ghost" id="lc-use">Use as my last working day</button><span class="small" id="lc-msg" role="status"></span></div>
   </section>
 
+  <section class="card hello" id="hello" data-view="home">
+    <h2 id="hello-title"></h2>
+    <p class="who" id="hello-who"></p>
+    <div class="prog"><span class="bar"><i id="hello-bar"></i></span><span id="hello-prog"></span></div>
+  </section>
+
   <section class="strip" id="strip" data-view="home"></section>
 
   <section class="card" id="next-card" data-view="home">
     <h2>Up next</h2>
     <ul class="upnext" id="next-list"></ul>
     <div class="actions"><button type="button" class="btn" id="open-check">Open checklist</button></div>
+  </section>
+
+  <section class="card" id="decide-card" data-view="home">
+    <h2>Your decisions</h2>
+    <p class="small" style="margin-top:4px">The choices that shape the rest of your plan. Write down what you decide so it’s here when you need it.</p>
+    <ul class="decide" id="decide-list"></ul>
   </section>
 
   <div class="mini" id="local-mini" data-view="home"></div>
@@ -266,7 +302,7 @@ a.btn { display: inline-block; text-decoration: none; }
   </div>
 
   <section class="card backup" data-view="me">
-    <h2>Your saved progress</h2>
+    <h2 id="backup-title">Your saved progress</h2>
     <p class="small" style="margin-top:4px" id="save-state"></p>
     <p class="small" style="margin-top:6px">Everything saves automatically on this device each time you change something, and it is still here when you come back. It is not stored anywhere else, so save a backup file now and then. Use that file, or the backup code, to move to a new phone or computer.</p>
     <div class="actions">
@@ -516,16 +552,21 @@ a.btn { display: inline-block; text-decoration: none; }
     var real = !!st.profile, p = st.profile || exampleProfile(), c = ctx(p), t = today();
     var list = ITEMS.filter(function (it) { return (!it.when || it.when(p, c)) && (!it.how || it.how.indexOf(c.how) >= 0); }).map(function (it) { return { it: it, d: due(it, p, c) }; });
 
-    // views
+    // views (first visit: only the setup screen)
+    var onboard = !real;
+    document.body.classList.toggle('onboard', onboard);
+    if (onboard) ui.view = 'me';
     Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (n) { n.hidden = n.getAttribute('data-view') !== ui.view; });
+    $('welcome').hidden = !onboard; $('intro').hidden = !onboard;
+    if (onboard) { $('leave-card').hidden = true; }
+    $('setup-title').textContent = onboard ? 'About you' : 'Your info';
+    $('backup-title').textContent = onboard ? 'Used this planner before?' : 'Your saved progress';
     Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function (b) { if (b.getAttribute('data-go') === ui.view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
 
     var byId = {}; list.forEach(function (r) { byId[r.it.id] = r; });
     leaveCalc();
 
     // setup card
-    if (real) { $('example-banner').hidden = true; $('intro').hidden = true; }
-    if (!real) $('example-text').textContent = 'It shows the plan for someone separating on ' + fmt(c.sep) + '.';
     var showForm = !real || ui.editing;
     $('setup').hidden = !showForm; $('summary').hidden = showForm; $('cancel-btn').hidden = !real;
     if (real) {
@@ -582,15 +623,44 @@ a.btn { display: inline-block; text-decoration: none; }
     mini.appendChild(mt);
     var mb = el('button', 'linkbtn', 'All contacts'); mb.type = 'button'; mb.addEventListener('click', function () { go('help'); }); mini.appendChild(mb);
 
+    // home: greeting and personal summary
+    if (real) {
+      var hr = new Date().getHours(), part = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+      var leftD = Math.round((c.sep - t) / DAY), verb = c.how === 'ret' ? 'retire' : 'separate';
+      $('hello-title').textContent = part + (p.name ? ', ' + p.name : '') + '. ' + (leftD > 0 ? 'You ' + verb + ' in ' + leftD.toLocaleString('en-US') + ' day' + (leftD === 1 ? '' : 's') + '.' : leftD === 0 ? 'Today is your last day.' : 'You’re out. Here’s what’s left.');
+      var who = [{ eaos: 'Separating at EAOS', ret: 'Retiring', inv: 'Separating (involuntary)', med: 'Separating through a medical board' }[c.how] + (base ? ' from ' + base[1] : '') + ' on ' + fmt(c.sep)];
+      if (c.out < c.sep) who.push('last day at your command ' + fmt(c.out));
+      if (p.state) who.push('moving to ' + p.state);
+      $('hello-who').textContent = who.join(' · ') + '.';
+      var dn = list.filter(function (r) { return st.done[r.it.id]; }).length;
+      $('hello-bar').style.width = (list.length ? 100 * dn / list.length : 0) + '%';
+      $('hello-prog').textContent = dn + ' of ' + list.length + ' checklist items done';
+
+      // your decisions
+      var dl2 = $('decide-list'); dl2.replaceChildren();
+      var decs = list.filter(function (r) { return r.it.t === 'decide'; }).sort(function (a, b) { return a.d - b.d; });
+      $('decide-card').hidden = ui.view !== 'home' || !decs.length;
+      decs.forEach(function (r) {
+        var li = el('li'), plan = String(st.plans[r.it.id] || '').trim(), done = !!st.done[r.it.id];
+        li.appendChild(el('span', 'tt', r.it.title));
+        if (plan) li.appendChild(el('span', 'pl', plan));
+        else li.appendChild(el('span', 'nd', done ? 'Marked done' : 'Not decided yet · decide by ' + fmt(r.d)));
+        var b = el('button', 'planbtn' + (plan ? '' : ' ask'), plan ? 'Edit' : '+ Add your decision'); b.type = 'button';
+        b.addEventListener('click', function () { ui.tab = r.it.ph; ui.open = r.it.id; go('checklist'); setTimeout(function () { var x = document.getElementById('p-' + r.it.id); if (x) { x.scrollIntoView({ block: 'center' }); x.focus(); } }, 50); });
+        li.appendChild(b); dl2.appendChild(li);
+      });
+    }
+
     // countdown strip
     var strip = $('strip'); strip.replaceChildren();
     function stat(k, v, s, cls, txt) { var d = el('div', 'card stat' + (cls ? ' ' + cls : '')); d.appendChild(el('div', 'k', k)); d.appendChild(el('div', 'v' + (txt ? ' txt' : ''), v)); d.appendChild(el('div', 's', s)); strip.appendChild(d); }
     var left = Math.round((c.sep - t) / DAY);
-    stat(left >= 0 ? 'Days until separation' : 'Days since separation', Math.abs(left).toLocaleString('en-US'), (c.how === 'ret' ? 'Retiring ' : c.how === 'eaos' ? 'EAOS ' : 'Separating ') + fmt(c.sep));
+    if (c.out < c.sep && c.out >= t) stat('Last day at your command', fmt(c.out), rel(c.out), '', true);
+    if (!real) stat(left >= 0 ? (c.how === 'ret' ? 'Days until retirement' : 'Days until separation') : 'Days since separation', Math.abs(left).toLocaleString('en-US'), (c.how === 'ret' ? 'Retiring ' : c.how === 'eaos' ? 'EAOS ' : 'Separating ') + fmt(c.sep));
     var nextDl = milestones(p, c).filter(function (m) { return (m[2] === 'dl' || m[2] === 'sep') && m[0] >= t; })[0];
     if (nextDl) stat('Next hard deadline', nextDl[1], fmt(nextDl[0]) + ' · ' + rel(nextDl[0]), 'hot', true);
     var nextN = list.filter(function (r) { return isNext(r.it, r.d, c); }).length;
-    stat('Items needing attention now', String(nextN), 'Past due, due soon, or waiting on a decision');
+    stat('Need your attention', String(nextN), nextN ? 'Past due, due soon, or waiting on a decision' : 'You’re caught up');
 
     // timeline
     var tl = $('timeline'); tl.replaceChildren(); var placed = false;
@@ -774,7 +844,7 @@ a.btn { display: inline-block; text-decoration: none; }
   });
   $('restore-btn').addEventListener('click', function () {
     try {
-      adopt(dec($('backup-code').value)); $('backup-code').value = ''; msg('Restored.'); render();
+      adopt(dec($('backup-code').value)); $('backup-code').value = ''; msg('Restored.'); go('home');
     } catch (e) { msg('That code didn’t work. Paste the whole code, with nothing added.'); }
   });
   $('file-btn').addEventListener('click', function () {
@@ -789,7 +859,7 @@ a.btn { display: inline-block; text-decoration: none; }
   $('file-in').addEventListener('change', function (ev) {
     var f = ev.target.files && ev.target.files[0]; if (!f) return;
     var rd = new FileReader();
-    rd.onload = function () { try { adopt(JSON.parse(String(rd.result))); msg('Restored from ' + f.name + '.'); render(); } catch (e) { msg('That file isn’t a planner backup.'); } ev.target.value = ''; };
+    rd.onload = function () { try { adopt(JSON.parse(String(rd.result))); msg('Restored from ' + f.name + '.'); go('home'); } catch (e) { msg('That file isn’t a planner backup.'); } ev.target.value = ''; };
     rd.onerror = function () { msg('That file couldn’t be read.'); };
     rd.readAsText(f);
   });
@@ -798,7 +868,7 @@ a.btn { display: inline-block; text-decoration: none; }
     if (!armed) { armed = true; $('reset-btn').textContent = 'Erase everything? Tap again'; setTimeout(function () { armed = false; $('reset-btn').textContent = 'Start over'; }, 5000); return; }
     armed = false; $('reset-btn').textContent = 'Start over';
     st = { profile: null, done: {}, plans: {} }; try { localStorage.removeItem(KEY); } catch (e) {}
-    fillForm(exampleProfile()); $('f-sep').value = ''; $('f-base').value = ''; msg('Erased.'); render();
+    fillForm(exampleProfile()); $('f-sep').value = ''; $('f-base').value = ''; $('f-name').value = ''; msg(''); ui.view = 'me'; render(); try { window.scrollTo(0, 0); } catch (e) {}
   });
 
   (function () { var sel = $('f-base'); sel.appendChild(new Option('Choose…', ''));
@@ -806,7 +876,7 @@ a.btn { display: inline-block; text-decoration: none; }
     sel.appendChild(new Option('Other / not listed', 'other')); })();
   load();
   (function () { var h = ''; try { h = location.hash.slice(1); } catch (e) {} if (VIEWS.indexOf(h) >= 0) ui.view = h; })();
-  if (st.profile) fillForm(st.profile);
+  if (st.profile) fillForm(st.profile); else { $('f-sep').value = ''; $('f-base').value = ''; ['married', 'sb', 'fed', 'clr', 'nuke'].forEach(function (k) { $('f-' + k).checked = false; }); }
   showSaved();
   render();
 })();
