@@ -1,0 +1,46 @@
+name: Weekly rule watch
+
+on:
+  schedule:
+    - cron: '17 13 * * 1'   # Mondays, about 8-9 a.m. Eastern
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: rule-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load last week's state
+        run: |
+          if git fetch --depth=1 origin watcher-state 2>/dev/null; then
+            git show origin/watcher-state:state.json > /tmp/state.json || echo '{}' > /tmp/state.json
+          else
+            echo '{}' > /tmp/state.json
+          fi
+
+      - name: Check NAVADMINs and linked pages
+        env:
+          STATE_FILE: /tmp/state.json
+          INDEX_FILE: index.html
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 watcher/watch.py
+
+      - name: Save state
+        run: |
+          mkdir -p /tmp/statebranch && cd /tmp/statebranch
+          git init -q -b watcher-state
+          cp /tmp/state.json state.json
+          printf 'State for the weekly rule watcher. Managed automatically; do not edit.\n' > README.md
+          git add -A
+          git -c user.name="rule-watch" -c user.email="actions@users.noreply.github.com" commit -q -m "Update watcher state"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" watcher-state
