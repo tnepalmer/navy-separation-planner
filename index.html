@@ -122,6 +122,16 @@ body.onboard { padding-bottom: 48px; }
 .welcome .steps div { font-size: .86rem; color: var(--muted); }
 .welcome .steps b { display: block; color: var(--ink); font-family: var(--display); font-weight: 600; font-size: .95rem; }
 .req { color: var(--bad); }
+.bell { margin-left: auto; flex: none; width: 34px; height: 30px; display: inline-grid; place-items: center; background: transparent; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
+.bell svg { width: 17px; height: 17px; }
+.bell[aria-pressed=true] { color: var(--gold); border-color: var(--gold); background: var(--bg); }
+.bell[aria-pressed=false] svg .slash { display: block; }
+.bell[aria-pressed=true] svg .slash { display: none; }
+.item .head { align-items: center; }
+.nudge { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 8px; font-size: .86rem; margin: 6px 0 10px; }
+.notif-state { font-weight: 600; }
+.notif-state.on { color: var(--ok); }
+.ios-steps { font-size: .86rem; color: var(--muted); margin: 8px 0 0; padding-left: 1.2rem; }
 .wiz-top { display: none; }
 form.wizard .wiz-top { display: flex; flex-direction: column; gap: 10px; }
 form.wizard > h2, form.wizard > p.small, form.wizard .actions { display: none; }
@@ -311,6 +321,24 @@ a.btn { display: inline-block; text-decoration: none; }
     </form>
   </section>
 
+  <section class="card" id="notif-card" data-view="me" hidden>
+    <h2>Phone notifications</h2>
+    <p class="small" style="margin-top:4px">Get a notification 7 days before and on the day each belled item is due, at 9 a.m. your time, even when the app is closed. Turn the bell on or off for any item in your checklist.</p>
+    <p style="margin-top:10px">Status: <span class="notif-state" id="notif-state">Off</span></p>
+    <ol class="ios-steps" id="ios-steps" hidden>
+      <li>Tap the Share button in Safari.</li>
+      <li>Choose <b>Add to Home Screen</b>.</li>
+      <li>Open the planner from your home screen, then come back here.</li>
+    </ol>
+    <div class="actions">
+      <button type="button" class="btn" id="notif-on">Turn on notifications</button>
+      <button type="button" class="btn ghost" id="notif-test" hidden>Send a test</button>
+      <button type="button" class="btn ghost" id="notif-off" hidden>Turn off</button>
+      <span class="small" id="notif-msg" role="status"></span>
+    </div>
+    <p class="small" style="margin-top:10px">Only your phone’s notification address, time zone and the titles and dates of belled items go to the reminder server. Your name, base and notes stay on this device. Turning notifications off deletes them from the server.</p>
+  </section>
+
   <section class="card" id="leave-card" data-view="me">
     <h2>Terminal leave calculator</h2>
     <p class="small" style="margin-top:4px">Works out your last working day from your leave balance. It is an estimate: your CPPA confirms your real balance and dates.</p>
@@ -376,6 +404,7 @@ a.btn { display: inline-block; text-decoration: none; }
     <section class="card" id="checklist-card" data-view="checklist">
       <h2>Checklist</h2>
       <p class="small">Tick items off, and write what you've decided under “My plan”. Confirm anything Navy-specific with your CCC or CPPA.</p>
+      <div class="nudge" id="nudge" hidden><span id="nudge-txt"></span><button type="button" class="btn ghost" id="nudge-btn">Turn on</button></div>
       <div class="tools">
         <div class="prog"><span class="bar"><i id="prog-bar"></i></span><span id="prog-txt"></span></div>
         <label class="hide"><input type="checkbox" class="box" id="hide-done"> Hide done</label>
@@ -538,16 +567,18 @@ a.btn { display: inline-block; text-decoration: none; }
   var PHASES = [['next', 'Do now'], ['tap', 'Transition & medical'], ['package', 'Separation paperwork'], ['move', 'Move & travel'], ['career', 'Career & records'], ['forgot', 'Often forgotten'], ['after', 'After you’re out'], ['plans', 'My plans'], ['all', 'All']];
 
   // ---------- state ----------
-  var st = { profile: null, done: {}, plans: {} }, ui = { tab: 'next', hide: false, editing: false, view: 'home' };
+  var REMINDER_API = '';
+  var st = { profile: null, done: {}, plans: {}, bells: {}, push: null }, ui = { tab: 'next', hide: false, editing: false, view: 'home' };
   var VIEWS = ['home', 'checklist', 'dates', 'help', 'me'];
   function go(v) { if (VIEWS.indexOf(v) < 0) v = 'home'; if (v === 'home' && ui.view !== 'home' && typeof replayCountdown === 'function') replayCountdown(); ui.view = v; try { if (location.hash !== '#' + v) location.hash = v; } catch (e) {} render(); try { window.scrollTo(0, 0); } catch (e) {} }
-  function load() { try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && typeof r === 'object') st = { profile: r.profile || null, done: r.done || {}, plans: r.plans || {}, savedAt: r.savedAt || '', leave: r.leave || null }; } catch (e) {} }
+  function load() { try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r && typeof r === 'object') st = { profile: r.profile || null, done: r.done || {}, plans: r.plans || {}, savedAt: r.savedAt || '', leave: r.leave || null, bells: r.bells || {}, push: r.push || null }; } catch (e) {} }
   var saveOk = true;
   var askedPersist = false;
   function save() {
     try { st.savedAt = new Date().toISOString(); localStorage.setItem(KEY, JSON.stringify(st)); saveOk = true; } catch (e) { saveOk = false; }
     if (saveOk && !askedPersist) { askedPersist = true; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {} }
     showSaved();
+    if (typeof queueSync === 'function') queueSync();
   }
   function showSaved() {
     var n = document.getElementById('save-state'); if (!n) return;
@@ -557,7 +588,7 @@ a.btn { display: inline-block; text-decoration: none; }
   }
   function adopt(o) {
     if (!o || typeof o !== 'object' || (o.profile && parse(o.profile.sep) === null)) throw 0;
-    st = { profile: o.profile || null, done: o.done || {}, plans: o.plans || {}, leave: o.leave || null }; save(); ui.editing = false; lcFilled = false;
+    st = { profile: o.profile || null, done: o.done || {}, plans: o.plans || {}, leave: o.leave || null, bells: o.bells || {}, push: st.push || null }; save(); ui.editing = false; lcFilled = false;
     if (st.profile) fillForm(st.profile);
   }
 
@@ -766,6 +797,12 @@ a.btn { display: inline-block; text-decoration: none; }
     });
     if (!placed) todayRow();
 
+    // notifications nudge
+    var showNudge = NOTIFY.ok && real && !(st.push && st.push.on) && !st.nudgeHidden;
+    $('nudge').hidden = !showNudge;
+    if (showNudge) $('nudge-txt').textContent = 'Want a heads-up before deadlines? Turn on phone notifications, then use the bell on each item.';
+    renderNotif();
+
     // progress + tabs
     var doneN = list.filter(function (r) { return st.done[r.it.id]; }).length;
     $('prog-bar').style.width = (list.length ? 100 * doneN / list.length : 0) + '%';
@@ -796,7 +833,15 @@ a.btn { display: inline-block; text-decoration: none; }
       li.appendChild(cb);
       var body = el('div'); li.appendChild(body);
       var head = el('div', 'head'); var lab = el('label', 'ttl', it.title); lab.htmlFor = cb.id; head.appendChild(lab);
-      var s = status(it, r.d, c); head.appendChild(el('span', 'pill ' + s[1], s[0])); body.appendChild(head);
+      var s = status(it, r.d, c); head.appendChild(el('span', 'pill ' + s[1], s[0]));
+      if (NOTIFY.ok && !done && r.d >= t) {
+        var bell = el('button', 'bell'); bell.type = 'button'; var on = bellOn(it);
+        bell.setAttribute('aria-pressed', String(on)); bell.setAttribute('aria-label', (on ? 'Reminder on: ' : 'Reminder off: ') + it.title); bell.title = on ? 'Reminder on. Tap to turn off.' : 'Reminder off. Tap to turn on.';
+        bell.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path class="slash" d="M3 3l18 18"/></svg>';
+        bell.addEventListener('click', function () { st.bells[it.id] = !bellOn(it); save(); render(); });
+        head.appendChild(bell);
+      }
+      body.appendChild(head);
       var meta = el('div', 'meta'), dd = Math.round((r.d - t) / DAY);
       meta.appendChild(el('b', '', (it.t === 'info' ? '' : 'Due ') + fmt(r.d)));
       meta.appendChild(document.createTextNode(' · '));
@@ -868,6 +913,86 @@ a.btn { display: inline-block; text-decoration: none; }
     if (!dl) { fallback('Downloads aren’t available in this view.'); return; }
     dl.save({ filename: 'navy-separation-reminders.csv', data: out.text }).then(function () { ta.hidden = true; cm.textContent = 'Saved ' + out.n + ' calendar entries. Now import the file into your calendar.'; },
       function (e) { if (e && e.code === 'declined') cm.textContent = 'Download cancelled.'; else if (e && e.code === 'rate_limited') cm.textContent = 'A download prompt is already open. Try again in a moment.'; else fallback('The download didn’t go through.'); });
+  });
+
+  // ---------- phone notifications ----------
+  var NOTIFY = { api: REMINDER_API.replace(/\/$/, ''), ok: false, ios: false, standalone: false };
+  try {
+    NOTIFY.standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    NOTIFY.ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    NOTIFY.ok = !!NOTIFY.api && !window.claude && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && (('PushManager' in window && 'Notification' in window) || (NOTIFY.ios && !NOTIFY.standalone));
+  } catch (e) { NOTIFY.ok = false; }
+  function bellOn(it) { return it.id in (st.bells || {}) ? !!st.bells[it.id] : (it.t === 'task' || it.t === 'decide'); }
+  function reminderList() {
+    var p = st.profile; if (!p) return [];
+    var c = ctx(p), t = today();
+    return ITEMS.filter(function (it) { return (!it.when || it.when(p, c)) && (!it.how || it.how.indexOf(c.how) >= 0); })
+      .map(function (it) { return { it: it, d: due(it, p, c) }; })
+      .filter(function (r) { return r.d >= t && !st.done[r.it.id] && bellOn(r.it); })
+      .sort(function (a, b) { return a.d - b.d; }).slice(0, 120)
+      .map(function (r) { return { id: r.it.id, title: r.it.title, date: iso(r.d) }; });
+  }
+  function nmsg(t) { $('notif-msg').textContent = t; }
+  function api(path, body) { return fetch(NOTIFY.api + path, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); }); }
+  function keyBytes(b64) { var s = b64.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var bin = atob(s), out = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+  function tz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'; } catch (e) { return 'America/New_York'; } }
+  function currentSub() { return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription().then(function (sub) { return { reg: reg, sub: sub }; }); }); }
+  function pushSync() {
+    if (!NOTIFY.ok || !st.push || !st.push.on) return Promise.resolve();
+    return currentSub().then(function (x) {
+      if (!x.sub) {
+        if (Notification.permission !== 'granted') { st.push = null; persistQuiet(); render(); return; }
+        return api('/key').then(function (k) { return x.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(k.publicKey) }); })
+          .then(function (sub) { st.push = { on: true, endpoint: sub.endpoint }; persistQuiet(); return api('/subscribe', { subscription: sub.toJSON(), tz: tz(), reminders: reminderList() }); });
+      }
+      st.push.endpoint = x.sub.endpoint;
+      return api('/subscribe', { subscription: x.sub.toJSON(), tz: tz(), reminders: reminderList() }).then(function () { st.push.synced = new Date().toISOString(); persistQuiet(); });
+    }).catch(function () {});
+  }
+  function persistQuiet() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  var syncT = null;
+  function queueSync() { if (!NOTIFY.ok || !st.push || !st.push.on) return; clearTimeout(syncT); syncT = setTimeout(pushSync, 1500); }
+  function renderNotif() {
+    var card = $('notif-card'); card.hidden = !NOTIFY.ok || ui.view !== 'me' || !st.profile;
+    if (card.hidden) return;
+    var on = !!(st.push && st.push.on), needInstall = NOTIFY.ios && !NOTIFY.standalone, denied = !needInstall && 'Notification' in window && Notification.permission === 'denied';
+    var n = on ? reminderList().length : 0;
+    $('notif-state').textContent = on ? 'On · ' + n + ' upcoming reminder' + (n === 1 ? '' : 's') : needInstall ? 'Add the app to your Home Screen first' : denied ? 'Blocked in your phone settings' : 'Off';
+    $('notif-state').className = 'notif-state' + (on ? ' on' : '');
+    $('ios-steps').hidden = !needInstall;
+    $('notif-on').hidden = on || needInstall; $('notif-off').hidden = !on; $('notif-test').hidden = !on;
+    $('notif-on').disabled = denied;
+  }
+  function turnOn() {
+    if (NOTIFY.ios && !NOTIFY.standalone) { go('me'); return; }
+    nmsg('Asking your phone for permission…');
+    Promise.resolve(Notification.requestPermission()).then(function (perm) {
+      if (perm !== 'granted') { nmsg(perm === 'denied' ? 'Notifications are blocked. Allow them for this app in your phone’s settings, then try again.' : 'Permission wasn’t given.'); render(); throw 'stop'; }
+      nmsg('Connecting…');
+      return Promise.all([currentSub(), api('/key')]);
+    }).then(function (r) {
+      var reg = r[0].reg, key = keyBytes(r[1].publicKey);
+      return (r[0].sub ? Promise.resolve(r[0].sub) : reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+    }).then(function (sub) {
+      return api('/subscribe', { subscription: sub.toJSON(), tz: tz(), reminders: reminderList() }).then(function (res) {
+        st.push = { on: true, endpoint: sub.endpoint, synced: new Date().toISOString() }; persistQuiet();
+        nmsg('Notifications are on. You’ll get ' + res.reminders + ' reminder' + (res.reminders === 1 ? '' : 's') + ' as dates come up.'); render();
+      });
+    }).catch(function (e) { if (e !== 'stop') nmsg('Couldn’t turn on notifications. Check your connection and try again.'); });
+  }
+  function turnOff(quiet) {
+    var ep = st.push && st.push.endpoint; st.push = null; persistQuiet();
+    var done = function () { if (!quiet) nmsg('Notifications are off and your reminders were deleted from the server.'); render(); };
+    if (!NOTIFY.ok) return done();
+    currentSub().then(function (x) { if (x.sub) x.sub.unsubscribe(); }).catch(function () {});
+    (ep ? api('/unsubscribe', { endpoint: ep }) : Promise.resolve()).then(done, done);
+  }
+  $('notif-on').addEventListener('click', turnOn);
+  $('nudge-btn').addEventListener('click', function () { if (NOTIFY.ios && !NOTIFY.standalone) { go('me'); return; } go('me'); turnOn(); });
+  $('notif-off').addEventListener('click', function () { turnOff(false); });
+  $('notif-test').addEventListener('click', function () {
+    if (!st.push || !st.push.endpoint) return; nmsg('Sending…');
+    api('/test', { endpoint: st.push.endpoint }).then(function (r) { nmsg(r.ok ? 'Test sent. It should arrive in a few seconds.' : 'The test didn’t go through. Try turning notifications off and on.'); }, function () { nmsg('The test didn’t go through. Try turning notifications off and on.'); });
   });
 
   // ---------- header band sizing ----------
@@ -1066,7 +1191,8 @@ a.btn { display: inline-block; text-decoration: none; }
   $('reset-btn').addEventListener('click', function () {
     if (!armed) { armed = true; $('reset-btn').textContent = 'Erase everything? Tap again'; setTimeout(function () { armed = false; $('reset-btn').textContent = 'Start over'; }, 5000); return; }
     armed = false; $('reset-btn').textContent = 'Start over';
-    st = { profile: null, done: {}, plans: {} }; try { localStorage.removeItem(KEY); } catch (e) {}
+    if (st.push && st.push.on) turnOff(true);
+    st = { profile: null, done: {}, plans: {}, bells: {}, push: null }; try { localStorage.removeItem(KEY); } catch (e) {}
     fillForm(exampleProfile()); $('f-sep').value = ''; $('f-base').value = ''; $('f-name').value = ''; msg(''); ui.view = 'me'; wz.i = -1; render(); try { window.scrollTo(0, 0); } catch (e) {}
   });
 
@@ -1079,6 +1205,7 @@ a.btn { display: inline-block; text-decoration: none; }
   if (st.profile) fillForm(st.profile); else { $('f-sep').value = ''; $('f-base').value = ''; ['married', 'sb', 'fed', 'clr', 'nuke'].forEach(function (k) { $('f-' + k).checked = false; }); }
   showSaved();
   render();
+  if (st.push && st.push.on) setTimeout(pushSync, 2500);
 })();
 </script>
 <script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script></body></html>
