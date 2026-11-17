@@ -967,7 +967,7 @@ a.btn { display: inline-block; text-decoration: none; }
     if (NOTIFY.ios && !NOTIFY.standalone) { go('me'); return; }
     nmsg('Asking your phone for permission…');
     Promise.resolve(Notification.requestPermission()).then(function (perm) {
-      if (perm !== 'granted') { nmsg(perm === 'denied' ? 'Notifications are blocked. Allow them for this app in your phone’s settings, then try again.' : 'Permission wasn’t given.'); render(); throw 'stop'; }
+      if (perm !== 'granted') { nmsg(perm === 'denied' ? (NOTIFY.ios ? 'Notifications are blocked. Turn them on in iPhone Settings → Notifications → Sep Planner, then try again.' : 'Notifications are blocked for this site. Click the icon at the left of the address bar, set Notifications to Allow, reload, and try again.') : (NOTIFY.ios ? 'Your iPhone didn’t allow notifications. Tap Turn on again and choose Allow.' : 'Your browser didn’t allow notifications. If you didn’t see a pop-up, look for a crossed-out bell in the address bar, or click the icon at the left of the address bar and set Notifications to Allow. Then reload and try again.')); render(); throw 'stop'; }
       nmsg('Connecting…');
       return Promise.all([currentSub(), api('/key')]);
     }).then(function (r) {
