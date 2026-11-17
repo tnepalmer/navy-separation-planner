@@ -66,7 +66,11 @@ def normalize(body, ctype, url):
     if url.lower().endswith('.pdf') or 'pdf' in ctype:
         return body  # PDFs: compare the bytes
     text = body.decode('utf-8', 'replace')
-    text = re.sub(r'(?is)<(script|style|noscript|svg|head)\b.*?</\1>', ' ', text)
+    text = re.sub(r'(?is)<(script|style|noscript|svg|head|nav|header|footer|aside|form|button|select)\b.*?</\1>', ' ', text)
+    text = re.sub(r'(?is)<(div|section|ul)\b[^>]*(?:class|id)="[^"]*(?:related|sidebar|footer|header|menu|breadcrumb|share|social|cookie|banner|carousel|promo)[^"]*"[^>]*>.*?</\1>', ' ', text)
+    main = re.search(r'(?is)<main\b.*?</main>', text)
+    if main and len(re.sub(r'(?s)<[^>]+>', '', main.group(0)).strip()) > 400:
+        text = main.group(0)
     text = re.sub(r'(?s)<!--.*?-->', ' ', text)
     text = re.sub(r'(?s)<[^>]+>', ' ', text)
     text = html.unescape(text)
@@ -79,6 +83,20 @@ def normalize(body, ctype, url):
 
 def digest(b):
     return hashlib.sha256(b).hexdigest()
+
+
+POOL_MAX = 4000
+
+
+def sentences(text):
+    """Split page text into sentence-sized pieces keyed by a short hash."""
+    out = {}
+    for part in re.split(r'(?<=[.!?:;])\s+|\s{2,}|\s[|•·]\s', text):
+        part = part.strip()
+        if len(part) < 30 or len(part) > 600:
+            continue
+        out[hashlib.sha256(part.lower().encode()).hexdigest()[:16]] = part[:300]
+    return out
 
 
 def labels_from_index(path):
@@ -116,13 +134,13 @@ def navadmin_index_numbers(year):
     if status != 200:
         return []
     yy = f'{year % 100:02d}'
-    return sorted({int(n) for n in re.findall(rf'NAV{yy}(\d{{3}})\.(?:txt|pdf)', body.decode('utf-8', 'replace'), re.I)})
+    return sorted({int(n) for n in re.findall(rf'NAV{yy}(\d{{3}})\.(?:txt|pdf)', body.decode('utf-8', 'replace'), re.I)})  # 3 digits only
 
 
 def message_text(year, num):
     for ext in ('txt', 'pdf'):
         status, body, ctype = fetch(navadmin_url(year, num, ext))
-        if status == 200 and body:
+        if status == 200 and body and (ext == 'pdf' or re.search(rb'SUBJ|NAVADMIN', body[:4000], re.I)):
             if ext == 'pdf':
                 # Best effort: pull readable strings out of the PDF without extra libraries.
                 raw = body.decode('latin-1', 'replace')
@@ -185,7 +203,7 @@ def check_navadmins(state, today):
         candidates = [n for n in listed if n > last]
         if not candidates:
             n, misses = last, 0
-            while misses < MISS_LIMIT and len(candidates) < MAX_NEW_MESSAGES:
+            while misses < MISS_LIMIT and len(candidates) < MAX_NEW_MESSAGES and n < 998:
                 n += 1
                 text, _ = message_text(year, n)
                 if text:
@@ -222,16 +240,32 @@ def check_pages(state, urls, today):
             if (gone and fails == 1) or (not gone and fails == 2):  # report once
                 broken.append({'url': url, 'status': status or 'no response'})
             continue
-        h = digest(normalize(body, ctype, url))
-        if rec is None or 'hash' not in rec:
-            pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'streak': 0, 'blocked': False}
+        norm = normalize(body, ctype, url)
+        h = digest(norm)
+        is_pdf = url.lower().endswith('.pdf') or 'pdf' in ctype
+        sents = {} if is_pdf else sentences(norm.decode('utf-8', 'replace'))
+        if rec is None or 'hash' not in rec or (not is_pdf and 'stable' not in rec):
+            pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'blocked': False,
+                          'stable': {k: 1 for k in sents}, 'pool': sorted(sents)[:POOL_MAX], 'text': sents}
             continue
-        if h != rec['hash']:
-            streak = rec.get('streak', 0) + 1
-            pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'streak': streak, 'changed': today.isoformat()}
-            changed.append({'url': url, 'noisy': streak >= 3})
-        else:
-            pages[url] = {**rec, 'fails': 0, 'streak': 0, 'blocked': False}
+        if h == rec['hash']:
+            pages[url] = {**rec, 'fails': 0, 'blocked': False, 'stable': {k: min(9, v + 1) for k, v in rec.get('stable', {}).items()}}
+            continue
+        if is_pdf:
+            pages[url] = {**rec, 'hash': h, 'fails': 0, 'blocked': False, 'changed': today.isoformat()}
+            changed.append({'url': url, 'added': [], 'removed': [], 'pdf': True})
+            continue
+        pool, stable = set(rec.get('pool', [])), rec.get('stable', {})
+        added = [txt for k, txt in sents.items() if k not in pool]
+        removed_keys = [k for k, n in stable.items() if k not in sents and n >= 3]
+        removed = [rec.get('text', {}).get(k, '') for k in removed_keys]
+        new_stable = {k: min(9, stable.get(k, 0) + 1) for k in sents}
+        new_pool = sorted(pool | set(sents))[-POOL_MAX:]
+        texts = dict(sents)
+        pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'blocked': False, 'stable': new_stable, 'pool': new_pool, 'text': texts}
+        if added or removed:
+            pages[url]['changed'] = today.isoformat()
+            changed.append({'url': url, 'added': added[:4], 'removed': [r for r in removed if r][:4], 'pdf': False})
     for url in list(pages):
         if url not in urls:
             del pages[url]
@@ -249,19 +283,16 @@ def build_report(navs, changed, broken, first_run, n_pages, manual=None, labels=
         for n in navs:
             lines.append(f"- **[{n['id']}]({n['url']})**: {n['subject']}  \n  Mentions: {', '.join(n['hits'])}")
         lines.append('')
-    real = [c for c in changed if not c['noisy']]
-    noisy = [c for c in changed if c['noisy']]
-    if real:
-        lines.append('## Linked pages that changed since last week\n')
-        lines.append('Open each one and compare it with the planner item that cites it.\n')
-        for c in real:
-            lines.append(f"- {c['url']}")
+    if changed:
+        lines.append('## Linked pages with new or removed text\n')
+        lines.append('Compare each with the planner item that cites it.\n')
+        for c in changed:
+            lines.append(f"- {c['url']}" + ('  (the PDF file was replaced)' if c.get('pdf') else ''))
+            for t in c.get('added', []):
+                lines.append(f'  - New: “{t[:220]}”')
+            for t in c.get('removed', []):
+                lines.append(f'  - Gone: “{t[:220]}”')
         lines.append('')
-    if noisy:
-        lines.append('<details><summary>Pages that change almost every week (probably cosmetic)</summary>\n')
-        for c in noisy:
-            lines.append(f"- {c['url']}")
-        lines.append('\n</details>\n')
     if broken:
         lines.append('## Linked pages that stopped loading\n')
         lines.append('The planner links to these, but they now return “not found” or have failed two weeks in a row. They may need a new address.\n')
