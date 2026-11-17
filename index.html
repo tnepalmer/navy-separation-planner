@@ -460,7 +460,7 @@ a.btn { display: inline-block; text-decoration: none; }
     clr: ['VetraFi on clearance reinstatement', 'https://www.vetrafi.com/education-articles/security-clearance-after-you-separate-military'],
     chcbp: ['TRICARE CHCBP', 'https://tricare.mil/CHCBP'],
     vgli: ['VA life insurance fact sheet', 'https://www.va.gov/files/2019-07/VA-Toolkit-9-Life-Insurance-Fact-Sheet-508.pdf'],
-    ucx: ['VetraFi on UCX', 'https://www.vetrafi.com/education-articles/unemployment-compensation-ex-servicemembers-ucx'],
+    ucx: ['MyNavyHR: unemployment compensation', 'https://www.mynavyhr.navy.mil/Career-Management/Records-Management/Unemployment-Compensation/index.html'],
     irr: ['Navy Reserve IRR page', 'https://www.navyreserve.navy.mil/Resources/-IRR-Individual-Ready-Reserve/'],
     fsgli: ['Navy FSGLI page', 'https://www.mynavyhr.navy.mil/Support-Services/Casualty/FSGLI/'],
     eye: ['SECNAV 6810.1 (eyewear)', 'https://www.med.navy.mil/Portals/62/Documents/NMFA/NMLC/Nostra/6810.pdf'],
@@ -552,7 +552,7 @@ a.btn { display: inline-block; text-decoration: none; }
     { id: 'resid', ph: 'forgot', t: 'info', base: 'sep', off: 0, title: 'Sort out your state residency', notes: 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check income tax, vehicle registration and driver’s license rules for the state you’ll live in.', src: S.cp },
     { id: 'binder', ph: 'forgot', t: 'task', base: 'sep', off: 0, lead: 60, title: 'Build a separation binder, paper and digital', notes: 'Orders, DD 214 Member-4, medical and dental records, qualifications, move paperwork, travel claim receipts and your VA claim.', src: S.cp },
 
-    { id: 'ucx', alt: { ret: 'If you’re not working, file with your state using your DD 214 Member-4. Retired pay can reduce the benefit, and the rules follow the state you file in.' }, ph: 'after', t: 'task', base: 'sep', off: 7, lead: 7, title: 'File for unemployment (UCX) if you’re not working yet', notes: 'File with your state the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.', src: S.ucx },
+    { id: 'ucx', alt: { ret: 'If you’re not working, file with your state using your DD 214 Member-4. Retired pay can reduce the benefit, and the rules follow the state you file in.' }, ph: 'after', t: 'task', base: 'sep', off: 7, lead: 7, title: 'File for unemployment (UCX) if you’re not working yet', notes: 'File with your state workforce agency as soon as you can after separating, and no later than 18 months after. You generally need an honorable discharge and to have finished your first full term. Bring your DD 214, Social Security card and job history. Benefits count as taxable income.', src: S.ucx },
     { id: 'rating', after: ['bdd'], ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Watch for your VA rating decision', notes: 'BDD claims are usually decided soon after discharge. You have a year to ask for a review if you disagree.', src: S.bdd, when: va },
     { id: 'vahc', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Apply for VA health care and a Veteran ID card', notes: 'Once you have your DD 214. Also look up your state’s veteran benefits, which vary widely.', src: S.cp },
     { id: 'record214', ph: 'after', t: 'task', base: 'sep', off: 30, lead: 30, title: 'Record your DD 214 with your town or county clerk', notes: 'Many clerks record it free as a confidential record, so you can get certified copies later. In some states it is how you claim a veterans’ property tax exemption.', src: S.cp },
@@ -610,7 +610,7 @@ a.btn { display: inline-block; text-decoration: none; }
   }
   function notes(it, p, c, d) {
     if (it.id === 'sb') return 'The Navy caps SkillBridge plus any terminal leave after it at ' + c.tier + ' days before separation for your paygrade' + (p.grade === 'e5' ? ' (confirm the E-5-and-below figure with your CCC)' : '') + ', so your earliest start is ' + fmt(c.sep - c.tier * DAY) + '. The application window opens 365 days out, and it must be submitted at least 3 weeks before your start date. Command approval is not guaranteed.';
-    if (it.id === 'ucx' && p.state) return 'File with ' + p.state + ' the week you separate, with your DD 214 Member-4. Rules and amounts follow the state you file in, and benefits are taxable.';
+    if (it.id === 'ucx' && p.state && !(it.alt && it.alt[c.how])) return 'File with ' + p.state + '’s workforce agency as soon as you can after separating, and no later than 18 months after. You generally need an honorable discharge and to have finished your first full term. Bring your DD 214, Social Security card and job history. Benefits count as taxable income.';
     if (it.id === 'resid' && p.state) return 'Military protections that let you keep another state’s taxes, plates and license end with your service. Check ' + p.state + '’s income tax, vehicle registration and driver’s license rules.';
     if (it.alt && it.alt[c.how]) return it.alt[c.how];
     if (it.late && d < today()) return it.late;

@@ -33,6 +33,7 @@ INDEX_FILE = os.environ.get('INDEX_FILE', 'index.html')
 SKIP_HOSTS = ('fonts.googleapis.com', 'fonts.gstatic.com', 'github.com', 'workers.dev', 'calendar.google.com', 'safe.apps.mil', 'va.my.site.com')
 MAX_NEW_MESSAGES = 60
 MISS_LIMIT = 4  # stop probing NAVADMIN numbers after this many misses in a row
+BLOCKED = (401, 403, 429)  # the site refuses automated visitors from cloud servers
 
 # Topics that can change the planner. Case-insensitive unless marked.
 KEYWORDS = [
@@ -80,6 +81,16 @@ def digest(b):
     return hashlib.sha256(b).hexdigest()
 
 
+def labels_from_index(path):
+    src = open(path, encoding='utf-8').read()
+    out = {}
+    for label, url in re.findall(r"\['([^'\]]{3,90})', '(https://[^']+)'\]", src):
+        out.setdefault(url, label)
+    for name, url in re.findall(r"nm: '([^']+)'[^}]*?url: '(https://[^']+)'", src):
+        out.setdefault(url, name)
+    return out
+
+
 def links_from_index(path):
     src = open(path, encoding='utf-8').read()
     urls = set()
@@ -100,6 +111,8 @@ def navadmin_url(year, num, ext):
 def navadmin_index_numbers(year):
     status, body, _ = fetch(f'{NAVADMIN_BASE}/References/Messages/NAVADMIN-{year}/')
     print(f'  NAVADMIN index {year}: {status if status else "ERR " + body[:80].decode("utf-8", "replace")}')
+    if status in BLOCKED:
+        return None
     if status != 200:
         return []
     yy = f'{year % 100:02d}'
@@ -146,8 +159,14 @@ def check_navadmins(state, today):
     nav = state.setdefault('navadmin', {})
     for year in sorted({today.year - (1 if today.month == 1 else 0), today.year}):
         key = str(year)
-        last = nav.get(key)
+        last = nav.get(key) or None
         listed = navadmin_index_numbers(year)
+        if listed is None:
+            state['navadmin_blocked'] = True
+            nav.pop(key, None)
+            notes.append(f'NAVADMIN {year}: site refused the request; skipped.')
+            continue
+        state['navadmin_blocked'] = False
         if last is None:
             # First run for this year: record where we are without reporting old messages.
             start = max(listed) if listed else 0
@@ -193,22 +212,26 @@ def check_pages(state, urls, today):
         status, body, ctype = fetch(url)
         print(f'  {status if status else "ERR"}  {url}' + ('' if status else f'  ({body[:80].decode("utf-8", "replace")})'))
         rec = pages.get(url)
+        if status in BLOCKED:
+            pages[url] = {**(rec or {}), 'blocked': True, 'fails': 0}
+            continue
         if status != 200 or not body:
             fails = (rec or {}).get('fails', 0) + 1
-            pages[url] = {**(rec or {}), 'fails': fails}
-            if fails == 2:  # report once, after two weeks in a row
+            pages[url] = {**(rec or {}), 'fails': fails, 'blocked': False}
+            gone = status in (404, 410)
+            if (gone and fails == 1) or (not gone and fails == 2):  # report once
                 broken.append({'url': url, 'status': status or 'no response'})
             continue
         h = digest(normalize(body, ctype, url))
         if rec is None or 'hash' not in rec:
-            pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'streak': 0}
+            pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'streak': 0, 'blocked': False}
             continue
         if h != rec['hash']:
             streak = rec.get('streak', 0) + 1
             pages[url] = {'hash': h, 'seen': today.isoformat(), 'fails': 0, 'streak': streak, 'changed': today.isoformat()}
             changed.append({'url': url, 'noisy': streak >= 3})
         else:
-            pages[url] = {**rec, 'fails': 0, 'streak': 0}
+            pages[url] = {**rec, 'fails': 0, 'streak': 0, 'blocked': False}
     for url in list(pages):
         if url not in urls:
             del pages[url]
@@ -216,10 +239,10 @@ def check_pages(state, urls, today):
 
 
 # ---------- report ----------
-def build_report(navs, changed, broken, first_run, n_pages):
+def build_report(navs, changed, broken, first_run, n_pages, manual=None, labels=None, nav_blocked=False, today=None):
     lines = []
     if first_run:
-        lines.append(f'The rule watcher is set up. It recorded a starting point for {n_pages} linked pages and this year’s NAVADMINs. '
+        lines.append(f'The rule watcher is set up. It recorded a starting point for the {n_pages} pages the planner links to. '
                      'From now on it checks every Monday and opens an issue only when something may affect the planner.\n')
     if navs:
         lines.append('## New NAVADMINs that mention separation topics\n')
@@ -241,9 +264,20 @@ def build_report(navs, changed, broken, first_run, n_pages):
         lines.append('\n</details>\n')
     if broken:
         lines.append('## Linked pages that stopped loading\n')
-        lines.append('These failed two weeks in a row. The planner links to them, so they may need a new address.\n')
+        lines.append('The planner links to these, but they now return “not found” or have failed two weeks in a row. They may need a new address.\n')
         for b in broken:
             lines.append(f"- {b['url']} (status {b['status']})")
+        lines.append('')
+    if manual:
+        labels = labels or {}
+        yr = today.year if today else dt.date.today().year
+        lines.append('## Monthly check by hand\n')
+        lines.append('These sites refuse automated checks from GitHub’s servers, so they need a quick look from a phone or computer. '
+                     'Open each one and confirm it still says what the planner says. Tick each box as you go.\n')
+        if nav_blocked:
+            lines.append(f'- [ ] [NAVADMIN messages for {yr}](https://www.mynavyhr.navy.mil/References/Messages/NAVADMIN-{yr}/): scan this month’s titles for separation, transition, SkillBridge, TAP, household goods or TRICARE')
+        for u in manual:
+            lines.append(f'- [ ] [{labels.get(u, u)}]({u})')
         lines.append('')
     if not lines:
         return None
@@ -272,16 +306,28 @@ def main():
         state = {}
     first_run = not state
     urls = links_from_index(INDEX_FILE)
+    labels = labels_from_index(INDEX_FILE)
     navs, nav_notes = check_navadmins(state, today)
     changed, broken, _ = check_pages(state, urls, today)
-    state['last_run'] = today.isoformat()
-    json.dump(state, open(STATE_FILE, 'w'), indent=1, sort_keys=True)
+    blocked = [u for u in urls if state['pages'].get(u, {}).get('blocked')]
+    monthly = today.day <= 7 and state.get('manual_month') != today.strftime('%Y-%m')
+    manual = blocked if monthly and (blocked or state.get('navadmin_blocked')) else None
+    if manual is not None:
+        state['manual_month'] = today.strftime('%Y-%m')
     for n in nav_notes:
         print(n)
     print(f'Checked {len(urls)} pages: {len(changed)} changed, {len(broken)} newly broken. NAVADMIN hits: {len(navs)}.')
-    body = build_report(navs, changed, broken, first_run, len(urls))
+    state['last_run'] = today.isoformat()
+    json.dump(state, open(STATE_FILE, 'w'), indent=1, sort_keys=True)
+    print(f'Blocked by the site (check by hand monthly): {len(blocked)}.')
+    body = build_report(navs, changed, broken, first_run, len(urls), manual, labels, state.get('navadmin_blocked'), today)
     if body:
-        title = 'Rule watcher is running' if first_run and not (navs or changed or broken) else f'Rule check {today.isoformat()}: {len(navs)} NAVADMIN, {len(changed)} page change(s), {len(broken)} broken link(s)'
+        if first_run and not (navs or changed or broken):
+            title = 'Rule watcher is running'
+        elif manual is not None and not (navs or changed or broken):
+            title = f'Monthly check by hand: {today.strftime("%B %Y")}'
+        else:
+            title = f'Rule check {today.isoformat()}: {len(navs)} NAVADMIN, {len(changed)} page change(s), {len(broken)} broken link(s)' + (' + monthly check by hand' if manual is not None else '')
         open_issue(title, body)
     else:
         print('Nothing to report.')
