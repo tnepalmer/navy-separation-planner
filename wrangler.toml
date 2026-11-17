@@ -1,0 +1,19 @@
+name = "navy-separation-planner"
+main = "worker/src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+[triggers]
+crons = ["5 * * * *"]
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
+
+[vars]
+ALLOWED_ORIGINS = "https://tnepalmer.github.io"
+CONTACT = "https://github.com/tnepalmer/navy-separation-planner"

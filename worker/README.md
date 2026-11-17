@@ -23,8 +23,9 @@ notifications off, when the phone's push address stops working, or after
 1. Create a free account at dash.cloudflare.com.
 2. Go to **Workers & Pages → Create → Import a repository**. Connect GitHub and pick
    `navy-separation-planner`.
-3. Set **Root directory** to `worker`. Leave the build command empty. The deploy
-   command is `npx wrangler deploy`.
+3. Leave the build command empty. The deploy command is `npx wrangler deploy`.
+   The `wrangler.toml` at the top of the project points Cloudflare at this folder, so
+   the root directory can be left blank or set to `worker`; both work.
 4. Deploy. Cloudflare shows the Worker's address, for example
    `https://navy-separation-planner.<your-subdomain>.workers.dev`.
 5. Put that address in `REMINDER_API` near the top of the script in `index.html`, and
