@@ -256,7 +256,6 @@ a.btn { display: inline-block; text-decoration: none; }
 <div class="wrap">
   <header>
     <h1>Navy Separation Planner</h1>
-    <p class="sub" id="intro" hidden>A personal checklist and deadline timeline for leaving the Navy, from TAP and your VA claim through your move and the months after you’re out.</p>
   </header>
 
   <nav class="nav" id="nav" aria-label="Sections">
@@ -275,7 +274,7 @@ a.btn { display: inline-block; text-decoration: none; }
       <div><b>2. Get your checklist</b>Only the items that apply to you, in order.</div>
       <div><b>3. Keep it current</b>Tick things off. It saves on this device.</div>
     </div>
-    <div class="actions"><button type="button" class="btn" id="wiz-start">Get started →</button></div>
+    <div class="actions"><button type="button" class="btn" id="wiz-start">Get started →</button><button type="button" class="linkbtn" id="coming-back">Coming back?</button></div>
   </section>
 
   <section class="card" id="setup-card" data-view="me">
@@ -415,9 +414,10 @@ a.btn { display: inline-block; text-decoration: none; }
   </div>
 
   <section class="card backup" data-view="me">
+    <button type="button" class="linkbtn" id="restore-back" hidden style="margin-bottom:10px">← Back</button>
     <h2 id="backup-title">Your saved progress</h2>
     <p class="small" style="margin-top:4px" id="save-state"></p>
-    <p class="small" style="margin-top:6px" id="restore-note" hidden>Restore your progress from a backup file or backup code you saved earlier.</p>
+    <p class="small" style="margin-top:6px" id="restore-note" hidden>Your progress is saved on the device you used before. To bring it here, restore the backup file or paste the backup code you saved from that device’s My info page.</p>
     <p class="small" style="margin-top:6px" id="save-note">Everything saves automatically on this device each time you change something, and it is still here when you come back. It is not stored anywhere else, so save a backup file now and then. Use that file, or the backup code, to move to a new phone or computer.</p>
     <div class="actions">
       <button type="button" class="btn" id="file-btn">Save backup file</button>
@@ -673,10 +673,11 @@ a.btn { display: inline-block; text-decoration: none; }
     document.body.classList.toggle('onboard', onboard);
     if (onboard) ui.view = 'me';
     Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (n) { n.hidden = n.getAttribute('data-view') !== ui.view; });
-    $('welcome').hidden = !onboard; $('intro').hidden = !onboard;
+    $('welcome').hidden = !onboard || ui.restore;
     if (onboard) { $('leave-card').hidden = true; }
     $('setup-title').textContent = onboard ? 'About you' : 'Your info';
-    $('backup-title').textContent = onboard ? 'Used this planner before?' : 'Your saved progress';
+    $('backup-title').textContent = onboard ? 'Welcome back' : 'Your saved progress';
+    if (!onboard) { ui.restore = false; $('restore-back').hidden = true; }
     ['save-state', 'save-note', 'file-btn', 'copy-btn', 'reset-btn'].forEach(function (id) { $(id).hidden = onboard; }); $('restore-note').hidden = !onboard;
     if (onboard) { if (wz.i < 0) $('setup-card').hidden = true; wizShow(); } else { $('setup').classList.remove('wizard'); wz.i = -1; }
     bandSize();
@@ -1095,9 +1096,10 @@ a.btn { display: inline-block; text-decoration: none; }
   function wizShow() {
     var form = $('setup'), on = wz.i >= 0 && !st.profile;
     form.classList.toggle('wizard', on);
-    $('welcome').hidden = !!st.profile || wz.i >= 0;
+    $('welcome').hidden = !!st.profile || wz.i >= 0 || !!ui.restore;
     $('setup-card').hidden = !st.profile && wz.i < 0 ? true : $('setup-card').hidden;
-    if (!st.profile && ui.view === 'me') document.querySelector('.backup').hidden = wz.i >= 0;
+    if (!st.profile && ui.view === 'me') document.querySelector('.backup').hidden = wz.i >= 0 || !ui.restore;
+    $('restore-back').hidden = !!st.profile || !ui.restore;
     if (!on) return;
     $('setup-card').hidden = false;
     var w = WIZ[wz.i];
@@ -1128,7 +1130,9 @@ a.btn { display: inline-block; text-decoration: none; }
     setTimeout(function () { if (focusEl && !(w2.id === 'sep' || w2.id === 'out')) focusEl.focus({ preventScroll: true }); else $('wiz-q').focus({ preventScroll: true }); }, 30);
     try { window.scrollTo(0, 0); } catch (e) {}
   }
-  $('wiz-start').addEventListener('click', function () { wz.i = -1; wizGo(1); });
+  $('wiz-start').addEventListener('click', function () { wz.i = -1; ui.restore = false; wizGo(1); });
+  $('coming-back').addEventListener('click', function () { ui.restore = true; render(); try { window.scrollTo(0, 0); } catch (e) {} });
+  $('restore-back').addEventListener('click', function () { ui.restore = false; render(); try { window.scrollTo(0, 0); } catch (e) {} });
   $('wiz-next').addEventListener('click', function () { wizGo(1); });
   $('wiz-back').addEventListener('click', function () { wizGo(-1); });
   $('wiz-skip').addEventListener('click', function () { var w = WIZ[wz.i]; if (w.id !== 'yn') $('f-' + w.id).value = ''; wizGo(1); });
