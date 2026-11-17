@@ -567,7 +567,7 @@ a.btn { display: inline-block; text-decoration: none; }
   var PHASES = [['next', 'Do now'], ['tap', 'Transition & medical'], ['package', 'Separation paperwork'], ['move', 'Move & travel'], ['career', 'Career & records'], ['forgot', 'Often forgotten'], ['after', 'After you’re out'], ['plans', 'My plans'], ['all', 'All']];
 
   // ---------- state ----------
-  var REMINDER_API = '';
+  var REMINDER_API = 'https://navy-separation-planner.thomas-n-e-palmer.workers.dev';
   var st = { profile: null, done: {}, plans: {}, bells: {}, push: null }, ui = { tab: 'next', hide: false, editing: false, view: 'home' };
   var VIEWS = ['home', 'checklist', 'dates', 'help', 'me'];
   function go(v) { if (VIEWS.indexOf(v) < 0) v = 'home'; if (v === 'home' && ui.view !== 'home' && typeof replayCountdown === 'function') replayCountdown(); ui.view = v; try { if (location.hash !== '#' + v) location.hash = v; } catch (e) {} render(); try { window.scrollTo(0, 0); } catch (e) {} }
